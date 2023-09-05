@@ -1,79 +1,87 @@
 <script setup lang="ts">
-interface blockstate {
-  x: number;
-  y: number;
-  revealed?: boolean;
-  mine?: boolean;
-  flagged?: boolean;
-  adjacentMines: number;
-}
-const width = 10;
-const height = 10;
-const state = reactive(
-  Array.from({ length: height }, (_, y) =>
-    Array.from(
-      { length: width },
-      (_, x): blockstate => ({ x, y, adjacentMines: 0, revealed: false })
-    )
+import { useStorage } from '@vueuse/core';
+import { GamePlay } from '~/composables/logic';
+
+const play = new GamePlay(9, 9, 10);
+
+const now = useNow();
+const timerMS = computed(() =>
+  Math.round(
+    ((play.state.value.endMS ?? +now) - (play.state.value.startMS ?? +now)) /
+      1000
   )
 );
 
-function generateMines() {
-  for (const row of state) {
-    for (const block of row) block.mine = Math.random() < 0.2;
+useStorage('vuesweeper-state', play.state);
+const state = computed(() => play.board);
+
+const mineRest = computed(() => {
+  if (!play.state.value.mineGenerated) return play.mines;
+  return play.blocks.reduce((a, b) => a - (b.flagged ? 1 : 0), play.mines);
+});
+
+function newGame(difficulty: 'easy' | 'medium' | 'hard') {
+  switch (difficulty) {
+    case 'easy':
+      play.reset(9, 9, 10);
+      break;
+    case 'medium':
+      play.reset(16, 16, 40);
+      break;
+    case 'hard':
+      play.reset(16, 30, 99);
+      break;
   }
 }
 
-const adjacentOffsets = [
-  [1, 1],
-  [1, 0],
-  [1, -1],
-  [0, -1],
-  [-1, -1],
-  [-1, 0],
-  [-1, 1],
-  [0, 1],
-];
-
-function updateNumbers() {
-  state.forEach((row, y) => {
-    row.forEach((block, x) => {
-      if (block.mine) return;
-
-      adjacentOffsets.forEach(([dx, dy]) => {
-        const x2 = x + dx;
-        const y2 = y + dy;
-        if (x2 < 0 || x2 >= width || y2 < 0 || y2 >= height) return;
-
-        if (state[y2][x2].mine) block.adjacentMines += 1;
-      });
-    });
-  });
-}
-
-function onClick(x: number, y: number) {
-  console.log(`Clicked at ${x + 1} ${y + 1}`);
-}
-
-generateMines();
-updateNumbers();
+watchEffect(() => {
+  play.checkGameState();
+});
 </script>
-
 <template>
-  <div
-    class="grid place-content-center min-h-screen text-center dark:bg-neutral-900 dark:text-neutral-50"
-  >
-    <div v-for="(row, y) in state" :key="y">
-      <button
-        v-for="(item, x) in row"
-        @click="onClick(x, y)"
-        :key="x"
-        class="w-10 h-10 border hover:bg-gray-100"
-      >
-        <div v-if="item.mine" class="text-red-500">x</div>
+  <div>
+    Minesweeper
 
-        <div v-else>{{ item.adjacentMines }}</div>
+    <div class="flex gap-1 justify-center p-4">
+      <button class="bg-cyan-500 rounded p-1" @click="play.reset()">
+        New Game
       </button>
+      <button class="bg-cyan-500 rounded p-1" @click="newGame('easy')">
+        Easy
+      </button>
+      <button class="bg-cyan-500 rounded p-1" @click="newGame('medium')">
+        Medium
+      </button>
+      <button class="bg-cyan-500 rounded p-1" @click="newGame('hard')">
+        Hard
+      </button>
+    </div>
+
+    <div class="flex gap-10 justify-center">
+      <div class="font-mono text-2xl flex gap-1 items-center">
+        <div>time:{{ timerMS }}</div>
+      </div>
+
+      <div class="font-mono text-2xl flex gap-1 items-center">
+        mine rest:{{ mineRest }}
+      </div>
+    </div>
+
+    <div class="p-5 w-full overflow-auto">
+      <div
+        v-for="(row, y) in state"
+        :key="y"
+        class="flex items-center justify-center w-max m-auto"
+      >
+        <MineBlock
+          v-for="(block, x) in row"
+          :key="x"
+          :block="block"
+          @click="play.onClick(block)"
+          @lrclick="play.autoExpand(block)"
+          @contextmenu.prevent="play.onRightClick(block)"
+        ></MineBlock>
+      </div>
     </div>
   </div>
 </template>
