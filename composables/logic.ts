@@ -118,7 +118,9 @@ export class GamePlay {
   }
 
   onRightClick(block: BlockState) {
-    if (this.state.value.status !== 'play' || block.flagged) return;
+    if (this.state.value.status !== 'play') return;
+
+    if (block.revealed) return;
     block.flagged = !block.flagged;
   }
 
@@ -140,6 +142,8 @@ export class GamePlay {
       this.onGameOver('lost');
       return;
     }
+
+    this.expendZero(block);
   }
 
   getSiblings(block: BlockState) {

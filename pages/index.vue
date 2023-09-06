@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/composables/logic';
+import '@material/web/all';
 
 const play = new GamePlay(9, 9, 10);
 
@@ -38,33 +39,32 @@ watchEffect(() => {
   play.checkGameState();
 });
 </script>
+
 <template>
   <div>
     Minesweeper
 
     <div class="flex gap-1 justify-center p-4">
-      <button class="bg-cyan-500 rounded p-1" @click="play.reset()">
-        New Game
+      <button @click="play.reset()">
+        <md-elevated-button>New Game</md-elevated-button>
       </button>
-      <button class="bg-cyan-500 rounded p-1" @click="newGame('easy')">
-        Easy
+      <button @click="newGame('easy')">
+        <md-elevated-button>Easy</md-elevated-button>
       </button>
-      <button class="bg-cyan-500 rounded p-1" @click="newGame('medium')">
-        Medium
+      <button @click="newGame('medium')">
+        <md-elevated-button>Medium</md-elevated-button>
       </button>
-      <button class="bg-cyan-500 rounded p-1" @click="newGame('hard')">
-        Hard
+      <button @click="newGame('hard')">
+        <md-elevated-button>Hard</md-elevated-button>
       </button>
     </div>
 
-    <div class="flex gap-10 justify-center">
-      <div class="font-mono text-2xl flex gap-1 items-center">
+    <div class="grid gap-10 place-content-center grid-flow-col">
+      <!-- <div class=" text-2xl flex gap-1 items-center">
         <div>time:{{ timerMS }}</div>
-      </div>
+      </div> -->
 
-      <div class="font-mono text-2xl flex gap-1 items-center">
-        mine rest:{{ mineRest }}
-      </div>
+      <div class="flex gap-1 items-center">mine rest:{{ mineRest }}</div>
     </div>
 
     <div class="p-5 w-full overflow-auto">
@@ -83,5 +83,8 @@ watchEffect(() => {
         ></MineBlock>
       </div>
     </div>
+
+    <div v-if="play.state.value.status === 'won'">Congratulations!</div>
+    <Footer></Footer>
   </div>
 </template>
