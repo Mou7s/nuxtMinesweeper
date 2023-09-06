@@ -38,6 +38,8 @@ function newGame(difficulty: 'easy' | 'medium' | 'hard') {
 watchEffect(() => {
   play.checkGameState();
 });
+
+play.reset();
 </script>
 
 <template>

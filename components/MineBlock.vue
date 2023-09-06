@@ -37,7 +37,7 @@ function getBlockClass(block: BlockState) {
 
 <template>
   <button
-    class="flex items-center justify-center w-8 h-8 border-2 border-neutral-400 opacity-90"
+    class="flex items-center justify-center w-8 h-8 border border-neutral-400 opacity-90"
     :class="getBlockClass(block)"
     @mousedown="whichButtons"
   >
