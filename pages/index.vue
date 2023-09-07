@@ -44,7 +44,7 @@ play.reset();
 
 <template>
   <div>
-    Minesweeper
+    <p class="text-3xl font-serif">Minesweeper</p>
 
     <div class="flex gap-1 justify-center p-4">
       <button @click="play.reset()">
@@ -66,7 +66,7 @@ play.reset();
         <div>time:{{ timerMS }}</div>
       </div> -->
 
-      <div class="flex gap-1 items-center">mine rest:{{ mineRest }}</div>
+      <div class="flex gap-1 items-center font-serif">mine rest:{{ mineRest }}</div>
     </div>
 
     <div class="p-5 w-full overflow-auto">
@@ -87,6 +87,5 @@ play.reset();
     </div>
 
     <div v-if="play.state.value.status === 'won'">Congratulations!</div>
-    <Footer></Footer>
   </div>
 </template>
