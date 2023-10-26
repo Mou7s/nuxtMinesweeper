@@ -66,7 +66,9 @@ play.reset();
         <div>time:{{ timerMS }}</div>
       </div> -->
 
-      <div class="flex gap-1 items-center font-serif">mine rest:{{ mineRest }}</div>
+      <div class="flex gap-1 items-center font-serif">
+        mine rest:{{ mineRest }}
+      </div>
     </div>
 
     <div class="p-5 w-full overflow-auto">
