@@ -2,6 +2,27 @@
 import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/composables/logic';
 
+const colorMode = useColorMode();
+const date = ref(new Date());
+
+const isDark = computed({
+  get() {
+    return colorMode.value === 'dark';
+  },
+  set() {
+    colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+  },
+});
+
+const label = computed(() =>
+  date.value.toLocaleDateString('en-us', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+);
+
 const play = new GamePlay(9, 9, 10);
 
 useStorage('vuesweeper-state', play.state);
@@ -34,8 +55,30 @@ play.reset();
 </script>
 
 <template>
-  <div>
-    <p class="text-3xl font-serif">Minesweeper</p>
+  <UContainer>
+    <UCard>
+      <div class="flex justify-between items-center">
+        <UButton icon="i-heroicons-calendar-days-20-solid" :label="label" />
+
+        <div>
+          <ClientOnly>
+            <UButton
+              :icon="
+                isDark
+                  ? 'i-heroicons-moon-20-solid'
+                  : 'i-heroicons-sun-20-solid'
+              "
+              color="gray"
+              variant="ghost"
+              aria-label="Theme"
+              @click="isDark = !isDark"
+            >
+            </UButton>
+          </ClientOnly>
+        </div>
+      </div>
+    </UCard>
+    <p class="text-3xl font-serif mt-10">Minesweeper</p>
 
     <div class="flex gap-1 justify-center p-4">
       <UButton @click="play.reset()">New Game</UButton>
@@ -68,5 +111,5 @@ play.reset();
     </div>
 
     <div v-if="play.state.value.status === 'won'">Congratulations!</div>
-  </div>
+  </UContainer>
 </template>
