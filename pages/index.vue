@@ -61,19 +61,6 @@ const newGame = (difficulty) => {
   const { rows, cols, mines } = difficultyLevels[difficulty];
   play.reset(rows, cols, mines);
 };
-// const newGame = (difficulty: 'easy' | 'medium' | 'hard') => {
-//   switch (difficulty) {
-//     case 'easy':
-//       play.reset(9, 9, 10);
-//       break;
-//     case 'medium':
-//       play.reset(16, 16, 40);
-//       break;
-//     case 'hard':
-//       play.reset(16, 30, 99);
-//       break;
-//   }
-// };
 
 watchEffect(() => {
   play.checkGameState();
