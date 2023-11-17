@@ -6,12 +6,6 @@ import '@material/web/all';
 const play = new GamePlay(9, 9, 10);
 
 const now = useNow();
-const timerMS = computed(() =>
-  Math.round(
-    ((play.state.value.endMS ?? +now) - (play.state.value.startMS ?? +now)) /
-      1000
-  )
-);
 
 useStorage('vuesweeper-state', play.state);
 const state = computed(() => play.board);
@@ -62,10 +56,6 @@ play.reset();
     </div>
 
     <div class="grid gap-10 place-content-center grid-flow-col">
-      <!-- <div class=" text-2xl flex gap-1 items-center">
-        <div>time:{{ timerMS }}</div>
-      </div> -->
-
       <div class="flex gap-1 items-center font-serif">
         mine rest:{{ mineRest }}
       </div>
