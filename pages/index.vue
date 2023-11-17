@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
-import { GamePlay } from '~/composables/logic';
+// import { useStorage } from '@vueuse/core';
+import { GamePlay } from '~/assets/logic';
 
 const colorMode = useColorMode();
-const date = ref(new Date());
+const date = useState('date', () => new Date());
 
 const isDark = computed({
   get() {
@@ -25,12 +25,18 @@ const label = computed(() =>
 
 const play = new GamePlay(9, 9, 10);
 
-useStorage('vuesweeper-state', play.state);
+// useStorage('vuesweeper-state', play.state);
+
 const state = computed(() => play.board);
 
 const mineRest = computed(() => {
-  if (!play.state.value.mineGenerated) return play.mines;
+  if (!play.state.value.mineGenerated) {
+    return play.mines;
+  }
   return play.blocks.reduce((a, b) => a - (b.flagged ? 1 : 0), play.mines);
+  // use filter
+  // const unflaggedBlocks = play.blocks.filter((b) => !b.flagged);
+  // return play.mines - unflaggedBlocks.length;
 });
 
 function newGame(difficulty: 'easy' | 'medium' | 'hard') {

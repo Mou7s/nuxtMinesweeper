@@ -7,6 +7,7 @@ useSeoMeta({
 });
 </script>
 <template>
+  <NuxtLoadingIndicator></NuxtLoadingIndicator>
   <main
     class="py-10 text-center min-h-screen max-h-screen dark:bg-neutral-800 dark:text-neutral-200"
   >
