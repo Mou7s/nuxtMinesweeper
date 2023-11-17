@@ -1,4 +1,4 @@
-import type { BlockState } from '~/assets/types';
+// import type { BlockState } from '~/assets/types';
 
 const directions = [
   [1, 1],
@@ -11,7 +11,7 @@ const directions = [
   [0, 1],
 ];
 
-type GameStatus = 'ready' | 'play' | 'won' | 'lost';
+// type GameStatus = 'ready' | 'play' | 'won' | 'lost';
 
 // interface GameState {
 //   board: BlockState[][];
@@ -24,7 +24,10 @@ type GameStatus = 'ready' | 'play' | 'won' | 'lost';
 export class GamePlay {
   state = ref();
 
-  constructor(public width, public height, public mines) {
+  constructor(width, height, mines) {
+    this.width = width;
+    this.height = height;
+    this.mines = mines;
     this.reset();
   }
 
