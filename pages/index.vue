@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/composables/logic';
-import '@material/web/all';
 
 const play = new GamePlay(9, 9, 10);
 
@@ -39,18 +38,10 @@ play.reset();
     <p class="text-3xl font-serif">Minesweeper</p>
 
     <div class="flex gap-1 justify-center p-4">
-      <button @click="play.reset()">
-        <md-elevated-button>New Game</md-elevated-button>
-      </button>
-      <button @click="newGame('easy')">
-        <md-elevated-button>Easy</md-elevated-button>
-      </button>
-      <button @click="newGame('medium')">
-        <md-elevated-button>Medium</md-elevated-button>
-      </button>
-      <button @click="newGame('hard')">
-        <md-elevated-button>Hard</md-elevated-button>
-      </button>
+      <UButton @click="play.reset()">New Game</UButton>
+      <UButton @click="newGame('easy')">Easy</UButton>
+      <UButton @click="newGame('medium')">Medium</UButton>
+      <UButton @click="newGame('hard')">Hard</UButton>
     </div>
 
     <div class="grid gap-10 place-content-center grid-flow-col">

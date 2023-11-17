@@ -6,7 +6,7 @@
       target="_blank"
       title="github"
     >
-      <md-elevated-button>Github</md-elevated-button>
+      <UButton>Github</UButton>
     </a>
   </nav>
 </template>
