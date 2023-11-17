@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 // import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/assets/logic';
 
@@ -39,19 +39,41 @@ const mineRest = computed(() => {
   // return play.mines - unflaggedBlocks.length;
 });
 
-function newGame(difficulty: 'easy' | 'medium' | 'hard') {
-  switch (difficulty) {
-    case 'easy':
-      play.reset(9, 9, 10);
-      break;
-    case 'medium':
-      play.reset(16, 16, 40);
-      break;
-    case 'hard':
-      play.reset(16, 30, 99);
-      break;
-  }
-}
+const difficultyLevels = {
+  easy: {
+    rows: 9,
+    cols: 9,
+    mines: 10,
+  },
+  medium: {
+    rows: 16,
+    cols: 16,
+    mines: 40,
+  },
+  hard: {
+    rows: 16,
+    cols: 30,
+    mines: 99,
+  },
+};
+
+const newGame = (difficulty) => {
+  const { rows, cols, mines } = difficultyLevels[difficulty];
+  play.reset(rows, cols, mines);
+};
+// const newGame = (difficulty: 'easy' | 'medium' | 'hard') => {
+//   switch (difficulty) {
+//     case 'easy':
+//       play.reset(9, 9, 10);
+//       break;
+//     case 'medium':
+//       play.reset(16, 16, 40);
+//       break;
+//     case 'hard':
+//       play.reset(16, 30, 99);
+//       break;
+//   }
+// };
 
 watchEffect(() => {
   play.checkGameState();
