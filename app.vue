@@ -1,7 +1,9 @@
 <script setup lang="ts">
-useHead({
-  title: 'A minesweeper game for web',
-  meta: [{ name: 'minesweeper game', content: 'a minesweeper game.' }],
+useSeoMeta({
+  title: ' Minesweeper',
+  ogTitle: 'Minesweeper',
+  description: 'a minesweeper game powered by nuxt',
+  ogDescription: 'a minesweeper game powered by nuxt',
 });
 </script>
 <template>
