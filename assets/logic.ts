@@ -13,22 +13,18 @@ const directions = [
 
 type GameStatus = 'ready' | 'play' | 'won' | 'lost';
 
-interface GameState {
-  board: BlockState[][];
-  mineGenerated: boolean;
-  status: GameStatus;
-  startMS?: number;
-  endMS?: number;
-}
+// interface GameState {
+//   board: BlockState[][];
+//   mineGenerated: boolean;
+//   status: GameStatus;
+//   startMS?: number;
+//   endMS?: number;
+// }
 
 export class GamePlay {
-  state = ref() as Ref<GameState>;
+  state = ref();
 
-  constructor(
-    public width: number,
-    public height: number,
-    public mines: number
-  ) {
+  constructor(public width, public height, public mines) {
     this.reset();
   }
 
@@ -37,7 +33,7 @@ export class GamePlay {
   }
 
   get blocks() {
-    return this.state.value.board.flat() as BlockState[];
+    return this.state.value.board.flat();
   }
 
   reset(width = this.width, height = this.height, mines = this.mines) {
@@ -49,28 +45,25 @@ export class GamePlay {
       mineGenerated: false,
       status: 'ready',
       board: Array.from({ length: this.height }, (_, y) =>
-        Array.from(
-          { length: this.width },
-          (_, x): BlockState => ({
-            x,
-            y,
-            adjacentMines: 0,
-            revealed: false,
-          })
-        )
+        Array.from({ length: this.width }, (_, x) => ({
+          x,
+          y,
+          adjacentMines: 0,
+          revealed: false,
+        }))
       ),
     };
   }
 
-  randomRange(min: number, max: number) {
+  randomRange(min, max) {
     return Math.random() * (max - min) + min;
   }
 
-  randomInt(min: number, max: number) {
+  randomInt(min, max) {
     return Math.round(this.randomRange(min, max));
   }
 
-  generateMines(state: BlockState[][], initial: BlockState) {
+  generateMines(state, initial) {
     const placeRandom = () => {
       const x = this.randomInt(0, this.width - 1);
       const y = this.randomInt(0, this.height - 1);
@@ -106,7 +99,7 @@ export class GamePlay {
     });
   }
 
-  expendZero(block: BlockState) {
+  expendZero(block) {
     if (block.adjacentMines) return;
 
     this.getSiblings(block).forEach((s) => {
@@ -117,14 +110,14 @@ export class GamePlay {
     });
   }
 
-  onRightClick(block: BlockState) {
+  onRightClick(block) {
     if (this.state.value.status !== 'play') return;
 
     if (block.revealed) return;
     block.flagged = !block.flagged;
   }
 
-  onClick(block: BlockState) {
+  onClick(block) {
     if ((this.state.value.status = 'ready')) {
       this.state.value.status = 'play';
       this.state.value.startMS = +new Date();
@@ -146,7 +139,7 @@ export class GamePlay {
     this.expendZero(block);
   }
 
-  getSiblings(block: BlockState) {
+  getSiblings(block) {
     return directions
       .map(([dx, dy]) => {
         const x2 = block.x + dx;
@@ -155,7 +148,7 @@ export class GamePlay {
           return undefined;
         return this.board[y2][x2];
       })
-      .filter(Boolean) as BlockState[];
+      .filter(Boolean);
   }
 
   showAllMines() {
@@ -173,7 +166,7 @@ export class GamePlay {
       this.onGameOver('won');
   }
 
-  autoExpand(block: BlockState) {
+  autoExpand(block) {
     if (this.state.value.status !== 'play' || block.flagged) return;
 
     const siblings = this.getSiblings(block);
@@ -198,7 +191,7 @@ export class GamePlay {
     }
   }
 
-  onGameOver(status: GameStatus) {
+  onGameOver(status) {
     this.state.value.status = status;
     this.state.value.endMS = +Date.now();
     if (status === 'lost') {
