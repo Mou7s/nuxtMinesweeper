@@ -5,8 +5,6 @@ import '@material/web/all';
 
 const play = new GamePlay(9, 9, 10);
 
-const now = useNow();
-
 useStorage('vuesweeper-state', play.state);
 const state = computed(() => play.board);
 
