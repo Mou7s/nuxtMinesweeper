@@ -1,4 +1,4 @@
-import { BlockState } from '~/types';
+import type { BlockState } from '~/assets/types';
 
 const directions = [
   [1, 1],

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BlockState } from '~/types';
+import type { BlockState } from '~/assets/types';
 import { isDev } from '~/composables/storage';
 
 defineProps<{ block: BlockState }>();
@@ -53,3 +53,4 @@ function getBlockClass(block: BlockState) {
     </div>
   </button>
 </template>
+~/assets/types
