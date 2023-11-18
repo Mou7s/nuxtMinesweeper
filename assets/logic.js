@@ -1,5 +1,3 @@
-// import type { BlockState } from '~/assets/types';
-
 const directions = [
   [1, 1],
   [1, 0],
@@ -10,16 +8,6 @@ const directions = [
   [-1, 1],
   [0, 1],
 ];
-
-// type GameStatus = 'ready' | 'play' | 'won' | 'lost';
-
-// interface GameState {
-//   board: BlockState[][];
-//   mineGenerated: boolean;
-//   status: GameStatus;
-//   startMS?: number;
-//   endMS?: number;
-// }
 
 export class GamePlay {
   state = useState();
@@ -90,8 +78,9 @@ export class GamePlay {
       if (
         Math.abs(initial.x - block.x) <= 1 &&
         Math.abs(initial.y - block.y) <= 1
-      )
+      ) {
         return false;
+      }
 
       if (block.mine) return false;
       block.mine = true;
