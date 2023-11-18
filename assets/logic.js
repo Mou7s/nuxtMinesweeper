@@ -126,7 +126,7 @@ export class GamePlay {
   onClick(block) {
     if ((this.state.value.status = 'ready')) {
       this.state.value.status = 'play';
-      this.state.value.startMS = +new Date();
+      // this.state.value.startMS = +new Date();
     }
 
     if (this.state.value.status !== 'play' || block.flagged) return;
