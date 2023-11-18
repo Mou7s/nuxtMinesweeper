@@ -22,7 +22,7 @@ const directions = [
 // }
 
 export class GamePlay {
-  state = ref();
+  state = useState();
 
   constructor(width, height, mines) {
     this.width = width;
@@ -40,6 +40,16 @@ export class GamePlay {
   }
 
   reset(width = this.width, height = this.height, mines = this.mines) {
+    if (!Number.isInteger(width) || width <= 0) {
+      throw new Error('Invalid width');
+    }
+    if (!Number.isInteger(height) || height <= 0) {
+      throw new Error('Invalid height');
+    }
+    if (!Number.isInteger(mines) || mines <= 0 || mines > width * height) {
+      throw new Error('Invalid number of mines');
+    }
+
     this.width = width;
     this.height = height;
     this.mines = mines;
@@ -47,15 +57,19 @@ export class GamePlay {
     this.state.value = {
       mineGenerated: false,
       status: 'ready',
-      board: Array.from({ length: this.height }, (_, y) =>
-        Array.from({ length: this.width }, (_, x) => ({
-          x,
-          y,
-          adjacentMines: 0,
-          revealed: false,
-        }))
-      ),
+      board: this.createBoard(width, height),
     };
+  }
+
+  createBoard(width, height) {
+    return Array.from({ length: height }, (_, y) =>
+      Array.from({ length: width }, (_, x) => ({
+        x,
+        y,
+        adjacentMines: 0,
+        revealed: false,
+      }))
+    );
   }
 
   randomRange(min, max) {
