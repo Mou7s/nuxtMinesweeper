@@ -1,3 +1,4 @@
+// 它包含了所有可能的方向的数组
 const directions = [
   [1, 1],
   [1, 0],
@@ -10,12 +11,13 @@ const directions = [
 ];
 
 export class GamePlay {
-  state = useState();
-
+  state = ref();
+  //init game
   constructor(width, height, mines) {
     this.width = width;
     this.height = height;
     this.mines = mines;
+    //reset game
     this.reset();
   }
 
@@ -166,12 +168,13 @@ export class GamePlay {
   checkGameState() {
     if (!this.state.value.mineGenerated || this.state.value.status !== 'play')
       return;
+
     const blocks = this.board.flat();
 
     if (!blocks.some((block) => !block.mine && !block.revealed))
       this.onGameOver('won');
   }
-
+  //auto expand sibling blocks
   autoExpand(block) {
     if (this.state.value.status !== 'play' || block.flagged) return;
 
@@ -196,7 +199,7 @@ export class GamePlay {
       });
     }
   }
-
+  //game over situation
   onGameOver(status) {
     this.state.value.status = status;
     this.state.value.endMS = +Date.now();
