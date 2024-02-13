@@ -1,14 +1,10 @@
-<script setup lang="ts">
-import type { BlockState } from '~/assets/types';
-import { isDev } from '~/composables/storage';
+<script setup>
+const isDev = ref(false);
+defineProps({ block: Object });
 
-defineProps<{ block: BlockState }>();
+const emit = defineEmits(['lrclick']);
 
-const emit = defineEmits<{
-  (e: 'lrclick', event: MouseEvent): void;
-}>();
-
-function whichButtons(event: MouseEvent) {
+function whichButtons(event) {
   if (event.buttons === 3) emit('lrclick', event);
 }
 
@@ -24,7 +20,7 @@ const numberColors = [
   'text-teal-500',
 ];
 
-function getBlockClass(block: BlockState) {
+function getBlockClass(block) {
   if (block.flagged) return 'bg-gray-500 opacity-10';
   if (!block.revealed)
     return 'bg-gray-500 opacity-10 hover:bg-gray-500 opacity-20';
