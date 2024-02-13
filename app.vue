@@ -21,7 +21,7 @@ useHead({
   <main
     class="py-8 text-center min-h-screen dark:bg-neutral-800 dark:text-neutral-200"
   >
-    <NuxtPage></NuxtPage>
+    <NuxtLayout><NuxtPage></NuxtPage></NuxtLayout>
     <Footer></Footer>
   </main>
 </template>
