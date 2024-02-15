@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@material/web": "1.0.0-pre.16",
-    "@nuxt/ui": "^2.13.0"
+    "@nuxt/ui": "^2.13.0",
+    "vue-confetti-explosion": "^1.0.2"
   }
 }

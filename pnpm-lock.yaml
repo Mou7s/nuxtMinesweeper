@@ -11,6 +11,9 @@ dependencies:
   '@nuxt/ui':
     specifier: ^2.13.0
     version: 2.13.0(nuxt@3.10.1)(vite@5.1.1)(vue@3.4.18)
+  vue-confetti-explosion:
+    specifier: ^1.0.2
+    version: 1.0.2(vue@3.4.18)
 
 devDependencies:
   '@nuxt/devtools':
@@ -6392,6 +6395,15 @@ packages:
     resolution: {integrity: sha512-oYATTQyh8XVkUWe2kaKxhxKVuuzK2Qcehe+yr3bGiaQAhK3ry2kYE4FWOfL+KO3hVFwCdLmzDQTzYhTi9C+R2A==}
     dependencies:
       ufo: 1.4.0
+
+  /vue-confetti-explosion@1.0.2(vue@3.4.18):
+    resolution: {integrity: sha512-80OboM3/6BItIoZ6DpNcZFqGpF607kjIVc5af56oKgtFmt5yWehvJeoYhkzYlqxrqdBe0Ko4Ie3bWrmLau+dJw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      vue: ^3.0.5
+    dependencies:
+      vue: 3.4.18
+    dev: false
 
   /vue-demi@0.14.7(vue@3.4.18):
     resolution: {integrity: sha512-EOG8KXDQNwkJILkx/gPcoL/7vH+hORoBaKgGe+6W7VFMvCYJfmF2dGbvgDroVnI8LU7/kTu8mbjRZGBU1z9NTA==}

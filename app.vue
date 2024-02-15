@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 useSeoMeta({
   title: ' Minesweeper',
   ogTitle: 'Minesweeper',
