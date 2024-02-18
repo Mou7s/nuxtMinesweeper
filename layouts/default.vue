@@ -1,3 +1,41 @@
+<template>
+  <UContainer>
+    <p class="text-3xl font-serif mt-10">Minesweeper</p>
+
+    <div class="flex gap-1 justify-center p-4">
+      <UButton @click="play.reset()">New Game</UButton>
+      <UButton @click="newGame('easy')">Easy</UButton>
+      <UButton @click="newGame('medium')">Medium</UButton>
+      <UButton @click="newGame('hard')">Hard</UButton>
+    </div>
+
+    <div class="grid gap-10 place-content-center grid-flow-col">
+      <div class="flex gap-1 items-center font-serif">
+        mine rest:{{ mineRest }}
+      </div>
+    </div>
+
+    <div class="p-5 w-full overflow-auto">
+      <div
+        v-for="(row, y) in state"
+        :key="y"
+        class="flex items-center justify-center w-max m-auto"
+      >
+        <MineBlock
+          v-for="(block, x) in row"
+          :key="x"
+          :block="block"
+          @click="play.onClick(block)"
+          @lrclick="play.autoExpand(block)"
+          @contextmenu.prevent="play.onRightClick(block)"
+        ></MineBlock>
+      </div>
+    </div>
+
+    <div v-if="play.state.value.status === 'won'">Congratulations!</div>
+  </UContainer>
+</template>
+
 <script setup>
 // import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/assets/logic';
@@ -47,41 +85,3 @@ watchEffect(() => {
 
 play.reset();
 </script>
-
-<template>
-  <UContainer>
-    <p class="text-3xl font-serif mt-10">Minesweeper</p>
-
-    <div class="flex gap-1 justify-center p-4">
-      <UButton @click="play.reset()">New Game</UButton>
-      <UButton @click="newGame('easy')">Easy</UButton>
-      <UButton @click="newGame('medium')">Medium</UButton>
-      <UButton @click="newGame('hard')">Hard</UButton>
-    </div>
-
-    <div class="grid gap-10 place-content-center grid-flow-col">
-      <div class="flex gap-1 items-center font-serif">
-        mine rest:{{ mineRest }}
-      </div>
-    </div>
-
-    <div class="p-5 w-full overflow-auto">
-      <div
-        v-for="(row, y) in state"
-        :key="y"
-        class="flex items-center justify-center w-max m-auto"
-      >
-        <MineBlock
-          v-for="(block, x) in row"
-          :key="x"
-          :block="block"
-          @click="play.onClick(block)"
-          @lrclick="play.autoExpand(block)"
-          @contextmenu.prevent="play.onRightClick(block)"
-        ></MineBlock>
-      </div>
-    </div>
-
-    <div v-if="play.state.value.status === 'won'">Congratulations!</div>
-  </UContainer>
-</template>

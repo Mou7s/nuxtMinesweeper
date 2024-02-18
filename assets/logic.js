@@ -97,8 +97,8 @@ export class GamePlay {
   }
 
   updateNumbers() {
-    this.board.forEach((raw) => {
-      raw.forEach((block) => {
+    this.board.forEach((row) => {
+      row.forEach((block) => {
         if (block.mine) return;
         this.getSiblings(block).forEach((b) => {
           if (b.mine) block.adjacentMines += 1;
@@ -158,11 +158,13 @@ export class GamePlay {
       })
       .filter(Boolean);
   }
-
+  //reveal all mines
   showAllMines() {
-    this.board.flat().forEach((i) => {
-      if (i.mine) i.revealed = true;
-    });
+    for (const block of this.board.flat()) {
+      if (block.mine) {
+        block.revealed = true;
+      }
+    }
   }
 
   checkGameState() {
@@ -201,13 +203,13 @@ export class GamePlay {
   }
   //game over situation
   onGameOver(status) {
+    const ALERT_DELAY = 10;
     this.state.value.status = status;
-    this.state.value.endMS = +Date.now();
     if (status === 'lost') {
       this.showAllMines();
       setTimeout(() => {
-        alert('lost');
-      }, 10);
+        alert('YOU LOST');
+      }, ALERT_DELAY);
     }
   }
 }
