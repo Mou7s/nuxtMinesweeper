@@ -37,12 +37,9 @@
 </template>
 
 <script setup>
-// import { useStorage } from '@vueuse/core';
 import { GamePlay } from '~/assets/logic';
 
 const play = new GamePlay(9, 9, 10);
-
-// useStorage('vuesweeper-state', play.state);
 
 const state = computed(() => play.board);
 
@@ -51,9 +48,6 @@ const mineRest = computed(() => {
     return play.mines;
   }
   return play.blocks.reduce((a, b) => a - (b.flagged ? 1 : 0), play.mines);
-  // use filter
-  // const unflaggedBlocks = play.blocks.filter((b) => !b.flagged);
-  // return play.mines - unflaggedBlocks.length;
 });
 
 const difficultyLevels = {

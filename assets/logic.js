@@ -14,11 +14,7 @@ export class GamePlay {
   state = ref();
   //init game
   constructor(width, height, mines) {
-    this.width = width;
-    this.height = height;
-    this.mines = mines;
-    //reset game
-    this.reset();
+    this.reset(width, height, mines);
   }
 
   get board() {
