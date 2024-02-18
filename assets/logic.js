@@ -29,17 +29,7 @@ export class GamePlay {
     return this.state.value.board.flat();
   }
 
-  reset(width = this.width, height = this.height, mines = this.mines) {
-    if (!Number.isInteger(width) || width <= 0) {
-      throw new Error('Invalid width');
-    }
-    if (!Number.isInteger(height) || height <= 0) {
-      throw new Error('Invalid height');
-    }
-    if (!Number.isInteger(mines) || mines <= 0 || mines > width * height) {
-      throw new Error('Invalid number of mines');
-    }
-
+  reset(width, height, mines) {
     this.width = width;
     this.height = height;
     this.mines = mines;

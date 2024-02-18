@@ -2,8 +2,8 @@
   <UContainer>
     <p class="text-3xl font-serif mt-10">Minesweeper</p>
 
-    <div class="flex gap-1 justify-center p-4">
-      <UButton @click="play.reset()">New Game</UButton>
+    <div class="flex gap-1 justify-center p-4 items-center">
+      <span class="font-serif font-bold bg-none">Reset:</span>
       <UButton @click="newGame('easy')">Easy</UButton>
       <UButton @click="newGame('medium')">Medium</UButton>
       <UButton @click="newGame('hard')">Hard</UButton>
@@ -83,5 +83,5 @@ watchEffect(() => {
   play.checkGameState();
 });
 
-play.reset();
+newGame('easy'); //start game
 </script>
