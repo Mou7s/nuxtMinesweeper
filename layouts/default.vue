@@ -39,9 +39,8 @@
 <script setup>
 import { GamePlay } from '~/assets/logic';
 
-const play = new GamePlay(9, 9, 10);
-
 const state = computed(() => play.board);
+const play = new GamePlay();
 
 const mineRest = computed(() => {
   if (!play.state.value.mineGenerated) {
