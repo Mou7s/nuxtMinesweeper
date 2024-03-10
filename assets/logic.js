@@ -11,7 +11,7 @@ const directions = [
 ];
 
 export class GamePlay {
-  state = ref();
+  state = ref('');
   //init game
   constructor(width, height, mines) {
     this.reset(width, height, mines);
@@ -189,13 +189,12 @@ export class GamePlay {
   }
   //game over situation
   onGameOver(status) {
-    const ALERT_DELAY = 10;
     this.state.value.status = status;
     if (status === 'lost') {
       this.showAllMines();
       setTimeout(() => {
-        alert('YOU LOST');
-      }, ALERT_DELAY);
+        alert('TRY AGAIN');
+      }, 0);
     }
   }
 }
