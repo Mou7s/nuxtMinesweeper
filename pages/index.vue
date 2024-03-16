@@ -1,31 +1,31 @@
 <template>
   <UContainer>
-    <div class="text-3xl font-serif">
-      <p
-        class="hover:text-green-500 transition-colors duration-500 ease-in-out inline"
-      >
-        Minesweeper
-      </p>
-    </div>
+    <p class="text-3xl font-serif">
+      <span class="hover:text-primary-500 Transition"> Minesweeper </span>
+    </p>
 
-    <div class="flex gap-1 justify-center p-4 items-center">
-      <span class="font-serif font-bold bg-none">Reset:</span>
+    <div class="flex justify-center items-center gap-1 p-4">
+      <span
+        class="Transition hover:text-primary-500 font-serif font-bold bg-none"
+      >
+        Reset:
+      </span>
       <UButton @click="newGame('easy')">Easy</UButton>
       <UButton @click="newGame('medium')">Medium</UButton>
       <UButton @click="newGame('hard')">Hard</UButton>
     </div>
 
     <div class="grid gap-10 place-content-center grid-flow-col">
-      <div class="flex gap-1 items-center font-serif">
-        mine rest:{{ mineRest }}
+      <div class="flex items-center font-serif">
+        <span>mine rest:{{ remainingMines }}</span>
       </div>
     </div>
 
-    <div class="p-5 w-full overflow-auto">
+    <div class="p-5 rounded">
       <div
         v-for="(row, y) in state"
         :key="y"
-        class="flex items-center justify-center w-max m-auto"
+        class="flex items-center justify-center"
       >
         <MineBlock
           v-for="(block, x) in row"
@@ -44,15 +44,23 @@
 
 <script setup>
 import { GamePlay } from '../assets/logic.js';
+import '../assets/style.css';
 
 const state = computed(() => play.board);
 const play = new GamePlay();
 
-const mineRest = computed(() => {
+const remainingMines = computed(() => {
+  // 如果地雷还没有生成，剩余的地雷数量就是总的地雷数量
   if (!play.state.value.mineGenerated) {
     return play.mines;
   }
-  return play.blocks.reduce((a, b) => a - (b.flagged ? 1 : 0), play.mines);
+
+  // 如果地雷已经生成，计算剩余的地雷数量
+  // 遍历所有的地雷块，如果一个地雷块被标记，就从总的地雷数量中减去 1
+  return play.blocks.reduce(
+    (total, block) => total - (block.flagged ? 1 : 0),
+    play.mines
+  );
 });
 
 const difficultyLevels = {
