@@ -1,1 +1,4 @@
-<template><slot></slot> <Footer></Footer></template>
+<template>
+  <slot></slot>
+  <Footer></Footer>
+</template>

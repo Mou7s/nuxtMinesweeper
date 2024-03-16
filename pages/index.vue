@@ -1,6 +1,12 @@
 <template>
   <UContainer>
-    <p class="text-3xl font-serif mt-10">Minesweeper</p>
+    <div class="text-3xl font-serif">
+      <p
+        class="hover:text-green-500 transition-colors duration-500 ease-in-out inline"
+      >
+        Minesweeper
+      </p>
+    </div>
 
     <div class="flex gap-1 justify-center p-4 items-center">
       <span class="font-serif font-bold bg-none">Reset:</span>
@@ -37,7 +43,7 @@
 </template>
 
 <script setup>
-import { GamePlay } from '~/assets/logic';
+import { GamePlay } from '../assets/logic.js';
 
 const state = computed(() => play.board);
 const play = new GamePlay();
