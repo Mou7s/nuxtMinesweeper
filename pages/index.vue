@@ -5,9 +5,9 @@
     </p>
 
     <div class="flex justify-center items-center gap-1 p-4 font-serif">
-      <UButton @click="newGame('easy')">Easy</UButton>
-      <UButton @click="newGame('medium')">Medium</UButton>
-      <UButton @click="newGame('hard')">Hard</UButton>
+      <UButton @click="newGame('beginner')">Beginner</UButton>
+      <UButton @click="newGame('intermediate')">Intermediate</UButton>
+      <UButton @click="newGame('expert')">Expert</UButton>
     </div>
 
     <div>
@@ -35,7 +35,6 @@
     </div>
     <div v-if="play.state.value.status === 'won'">
       <p>Congratulations!</p>
-
       <div class="flex justify-between">
         <ConfettiExplosion />
         <ConfettiExplosion />
@@ -67,19 +66,19 @@ const remainingMines = computed(() => {
 });
 
 const difficultyLevels = {
-  easy: {
+  beginner: {
     rows: 9,
     cols: 9,
     mines: 10,
   },
-  medium: {
+  intermediate: {
     rows: 16,
     cols: 16,
     mines: 40,
   },
-  hard: {
-    rows: 25,
-    cols: 25,
+  expert: {
+    rows: 16,
+    cols: 30,
     mines: 99,
   },
 };
@@ -93,5 +92,5 @@ watchEffect(() => {
   play.checkGameState();
 });
 
-newGame('easy'); //start game
+newGame('beginner'); //start game
 </script>
