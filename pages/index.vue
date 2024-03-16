@@ -4,24 +4,20 @@
       <span class="hover:text-primary-500 Transition"> Minesweeper </span>
     </p>
 
-    <div class="flex justify-center items-center gap-1 p-4">
-      <span
-        class="Transition hover:text-primary-500 font-serif font-bold bg-none"
-      >
-        Reset:
-      </span>
+    <div class="flex justify-center items-center gap-1 p-4 font-serif">
       <UButton @click="newGame('easy')">Easy</UButton>
       <UButton @click="newGame('medium')">Medium</UButton>
       <UButton @click="newGame('hard')">Hard</UButton>
     </div>
 
-    <div class="grid gap-10 place-content-center grid-flow-col">
-      <div class="flex items-center font-serif">
-        <span>mine rest:{{ remainingMines }}</span>
-      </div>
+    <div>
+      <span>Remaining Mines:</span>
+      <span class="text-3xl Transition text-green-500 border p-2 m-2">
+        {{ remainingMines }}
+      </span>
     </div>
 
-    <div class="p-5 rounded">
+    <div class="py-4">
       <div
         v-for="(row, y) in state"
         :key="y"
@@ -37,14 +33,21 @@
         ></MineBlock>
       </div>
     </div>
+    <div v-if="play.state.value.status === 'won'">
+      <p>Congratulations!</p>
 
-    <div v-if="play.state.value.status === 'won'">Congratulations!</div>
+      <div class="flex justify-between">
+        <ConfettiExplosion />
+        <ConfettiExplosion />
+      </div>
+    </div>
   </UContainer>
 </template>
 
 <script setup>
 import { GamePlay } from '../assets/logic.js';
 import '../assets/style.css';
+import ConfettiExplosion from 'vue-confetti-explosion';
 
 const state = computed(() => play.board);
 const play = new GamePlay();
