@@ -14,6 +14,7 @@ export class GamePlay {
   state = ref('');
   //init game
   constructor(width, height, mines) {
+    this.timerId = null;
     this.reset(width, height, mines);
   }
 
@@ -106,15 +107,19 @@ export class GamePlay {
 
   onRightClick(block) {
     if (this.state.value.status !== 'play') return;
-
     if (block.revealed) return;
     block.flagged = !block.flagged;
   }
 
   onClick(block) {
-    if ((this.state.value.status = 'ready')) {
+    if (this.state.value.status == 'ready') {
       this.state.value.status = 'play';
-      // this.state.value.startMS = +new Date();
+      this.state.value.startTime = Date.now();
+      this.timerId = setInterval(() => {
+        this.state.value.timeElapsed = Math.floor(
+          (Date.now() - this.state.value.startTime) / 1000
+        );
+      }, 1000);
     }
 
     if (this.state.value.status !== 'play' || block.flagged) return;
@@ -192,9 +197,8 @@ export class GamePlay {
     this.state.value.status = status;
     if (status === 'lost') {
       this.showAllMines();
-      setTimeout(() => {
-        alert('TRY AGAIN');
-      }, 0);
+
+      clearInterval(this.timerId);
     }
   }
 }

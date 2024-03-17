@@ -11,10 +11,18 @@
     </div>
 
     <div>
-      <span>Remaining Mines:</span>
-      <span class="text-3xl Transition text-green-500 border p-2 m-2">
-        {{ remainingMines }}
-      </span>
+      <p>
+        <span>Remaining Mines:</span>
+        <span class="text-3xl Transition text-green-500 p-2 m-2">
+          {{ remainingMines }}
+        </span>
+      </p>
+      <p>
+        <span>Time elapsed:</span>
+        <span class="text-3xl Transition text-green-500 p-2 m-2">
+          {{ play.state.value.timeElapsed || 0 }}
+        </span>
+      </p>
     </div>
 
     <div class="py-4">
@@ -77,8 +85,8 @@ const difficultyLevels = {
     mines: 40,
   },
   expert: {
-    rows: 16,
-    cols: 30,
+    rows: 20,
+    cols: 24,
     mines: 99,
   },
 };
