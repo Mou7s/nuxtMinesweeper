@@ -195,10 +195,9 @@ export class GamePlay {
   //game over situation
   onGameOver(status) {
     this.state.value.status = status;
+    clearInterval(this.timerId);
     if (status === 'lost') {
       this.showAllMines();
-
-      clearInterval(this.timerId);
     }
   }
 }
