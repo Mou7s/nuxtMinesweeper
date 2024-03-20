@@ -26,19 +26,9 @@
     </div>
 
     <div class="py-4">
-      <div
-        v-for="(row, y) in state"
-        :key="y"
-        class="flex items-center justify-center"
-      >
-        <MineBlock
-          v-for="(block, x) in row"
-          :key="x"
-          :block="block"
-          @click="play.onClick(block)"
-          @lrclick="play.autoExpand(block)"
-          @contextmenu.prevent="play.onRightClick(block)"
-        ></MineBlock>
+      <div v-for="(row, y) in state" :key="y" class="flex items-center justify-center">
+        <MineBlock v-for="(block, x) in row" :key="x" :block="block" @click="play.onClick(block)"
+          @lrclick="play.autoExpand(block)" @contextmenu.prevent="play.onRightClick(block)"></MineBlock>
       </div>
     </div>
     <div v-if="play.state.value.status === 'won'">
