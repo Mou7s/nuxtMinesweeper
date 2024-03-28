@@ -71,7 +71,10 @@ export class GamePlay {
         return false;
       }
 
-      if (block.mine) return false;
+      if (block.mine) {
+        return false;
+      }
+
       block.mine = true;
       return true;
     };
