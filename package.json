@@ -10,12 +10,12 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
-    "@vueuse/nuxt": "^10.9.0",
-    "nuxt": "^3.10.3"
+    "@vueuse/nuxt": "^10.11.1",
+    "nuxt": "^3.15.4"
   },
   "dependencies": {
     "@material/web": "1.0.0-pre.16",
-    "@nuxt/ui": "^2.14.2",
+    "@nuxt/ui": "^2.21.0",
     "vue-confetti-explosion": "^1.0.2"
   }
 }
