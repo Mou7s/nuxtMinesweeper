@@ -11,11 +11,11 @@
   "devDependencies": {
     "@nuxt/devtools": "latest",
     "@vueuse/nuxt": "^10.11.1",
-    "nuxt": "^3.15.4"
+    "nuxt": "^3.18.0"
   },
   "dependencies": {
     "@material/web": "1.0.0-pre.16",
-    "@nuxt/ui": "^2.21.0",
+    "@nuxt/ui": "^2.22.1",
     "vue-confetti-explosion": "^1.0.2"
   }
 }
