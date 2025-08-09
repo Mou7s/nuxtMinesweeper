@@ -80,8 +80,8 @@ export class GamePlay {
         y,
         adjacentMines: 0,
         revealed: false,
-  flagged: false,
-  mine: false,
+        flagged: false,
+        mine: false,
       }))
     );
   }
@@ -93,8 +93,8 @@ export class GamePlay {
 
   /** 生成 [min, max] 的均匀整数随机数（包含端点） */
   randomInt(min, max) {
-  // unbiased inclusive integer in [min, max]
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+    // unbiased inclusive integer in [min, max]
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   /**
@@ -208,7 +208,7 @@ export class GamePlay {
     }
 
     this.expendZero(block);
-  this.checkGameState();
+    this.checkGameState();
   }
 
   /**
@@ -254,8 +254,8 @@ export class GamePlay {
    * 仅在当前格已翻开时生效
    */
   autoExpand(block) {
-  if (this.state.value.status !== 'play' || block.flagged) return;
-  if (!block.revealed) return;
+    if (this.state.value.status !== 'play' || block.flagged) return;
+    if (!block.revealed) return;
 
     const siblings = this.getSiblings(block);
     const flags = siblings.reduce((a, b) => a + (b.flagged ? 1 : 0), 0);
@@ -277,7 +277,7 @@ export class GamePlay {
         if (!i.revealed && !i.flagged) i.flagged = true;
       });
     }
-  this.checkGameState();
+    this.checkGameState();
   }
   /**
    * 结束游戏：设置状态并停止计时；若失败则揭示所有雷
