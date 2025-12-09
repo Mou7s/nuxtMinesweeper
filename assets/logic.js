@@ -1,10 +1,3 @@
-/**
- * 扫雷核心逻辑（无 UI）：负责棋盘生成、布雷、展开、标记、胜负判定与计时。
- * 使用方式：在组件中 new GamePlay(width, height, mines) 并绑定到 UI。
- * 注意：ref 由 Vue 提供；在 Nuxt 3 中通常可自动导入，如在纯 JS 环境中需手动 `import { ref } from 'vue'`。
- */
-
-// 8 个相邻方向（dx, dy）：从右下角开始，顺时针一圈
 const directions = [
   [1, 1],
   [1, 0],
@@ -24,7 +17,7 @@ export class GamePlay {
    * startTime/timeElapsed: 计时信息（秒）
    * board: 二维数组，元素为格子 Block
    */
-  state = ref('');
+  state = ref({});
   /**
    * 初始化游戏
    * @param {number} width  棋盘宽度（列数）
@@ -55,14 +48,11 @@ export class GamePlay {
     this.mines = mines;
 
     // ensure previous timer is cleared when resetting during a game
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
+    this.stopTimer();
 
     this.state.value = {
       mineGenerated: false,
-      status: 'ready',
+      status: "ready",
       startTime: null,
       timeElapsed: 0,
       board: this.createBoard(width, height),
@@ -72,29 +62,38 @@ export class GamePlay {
   /**
    * 创建空棋盘
    * @returns {Array<Array<{x:number,y:number,adjacentMines:number,revealed:boolean,flagged:boolean,mine:boolean}>>}
+   * 每个格子只保存必要的状态字段，便于序列化和 UI 绑定
    */
   createBoard(width, height) {
-    return Array.from({ length: height }, (_, y) =>
-      Array.from({ length: width }, (_, x) => ({
-        x,
-        y,
-        adjacentMines: 0,
-        revealed: false,
-        flagged: false,
-        mine: false,
-      }))
-    );
+    const board = Array.from({ length: height }, () => Array(width));
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        board[y][x] = this.createBlock(x, y);
+      }
+    }
+    return board;
   }
 
-  /** 生成 [min, max) 浮点随机数（内部使用） */
-  randomRange(min, max) {
-    return Math.random() * (max - min) + min;
+  /** 单个格子模板，集中维护字段，便于调整结构 */
+  createBlock(x, y) {
+    return {
+      x,
+      y,
+      adjacentMines: 0,
+      revealed: false,
+      flagged: false,
+      mine: false,
+    };
   }
 
-  /** 生成 [min, max] 的均匀整数随机数（包含端点） */
-  randomInt(min, max) {
-    // unbiased inclusive integer in [min, max]
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  /** Fisher–Yates 洗牌，用于随机布雷 */
+  shuffle(list) {
+    const arr = [...list];
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
   /**
@@ -102,32 +101,17 @@ export class GamePlay {
    * @param {Array<Array<Block>>} state 当前棋盘
    * @param {{x:number,y:number}} initial 首次点击的格子
    */
-  generateMines(state, initial) {
-    const placeRandom = () => {
-      const x = this.randomInt(0, this.width - 1);
-      const y = this.randomInt(0, this.height - 1);
+  generateMines(initial) {
+    const isSafe = (block) =>
+      Math.abs(initial.x - block.x) <= 1 && Math.abs(initial.y - block.y) <= 1;
 
-      const block = state[y][x];
-
-      if (
-        Math.abs(initial.x - block.x) <= 1 &&
-        Math.abs(initial.y - block.y) <= 1
-      ) {
-        return false;
-      }
-
-      if (block.mine) {
-        return false;
-      }
-
-      block.mine = true;
-      return true;
-    };
-
-    Array.from({ length: this.mines }, () => null).forEach(() => {
-      let placed = false;
-      while (!placed) placed = placeRandom();
-    });
+    // 先过滤掉首点及其邻居，再随机抽取固定数量的格子设为雷
+    const candidates = this.blocks.filter((b) => !isSafe(b));
+    this.shuffle(candidates)
+      .slice(0, this.mines)
+      .forEach((block) => {
+        block.mine = true;
+      });
     this.updateNumbers();
   }
 
@@ -135,35 +119,35 @@ export class GamePlay {
    * 计算并写回每个非雷格的相邻雷数；方法幂等（先清零再叠加）
    */
   updateNumbers() {
-    // reset counts first to keep the method idempotent
-    this.board.forEach((row) => {
-      row.forEach((block) => {
-        block.adjacentMines = 0;
-      });
+    this.blocks.forEach((block) => {
+      block.adjacentMines = 0;
     });
-    this.board.forEach((row) => {
-      row.forEach((block) => {
-        if (block.mine) return;
-        this.getSiblings(block).forEach((b) => {
-          if (b.mine) block.adjacentMines += 1;
-        });
+
+    // 只遍历雷格，向其邻居累加计数，避免重复扫描整盘
+    this.blocks.forEach((block) => {
+      if (!block.mine) return;
+      this.forEachNeighbor(block, (neighbor) => {
+        neighbor.adjacentMines += 1;
       });
     });
   }
 
   /**
-   * 若当前格相邻雷数为 0，则递归展开其未翻开且未标记的邻居
-   * 注意：递归实现简单明了；若担心极端大盘面栈深，可改为 BFS 迭代
+   * 若当前格相邻雷数为 0，则展开其未翻开且未标记的邻居（迭代版避免递归栈）
    */
   expendZero(block) {
     if (block.adjacentMines) return;
 
-    this.getSiblings(block).forEach((s) => {
-      if (!s.revealed) {
-        if (!s.flagged) s.revealed = true;
-        this.expendZero(s);
-      }
-    });
+    // 使用队列而非递归，避免大盘面出现调用栈过深
+    const queue = [block];
+    while (queue.length) {
+      const current = queue.shift();
+      this.forEachNeighbor(current, (neighbor) => {
+        if (neighbor.revealed || neighbor.flagged) return;
+        neighbor.revealed = true;
+        if (!neighbor.adjacentMines) queue.push(neighbor);
+      });
+    }
   }
 
   // alias for readability; keeps backward compatibility
@@ -175,7 +159,7 @@ export class GamePlay {
    * 右键标记/取消标记：仅在进行中且未翻开的格子上生效
    */
   onRightClick(block) {
-    if (this.state.value.status !== 'play') return;
+    if (this.state.value.status !== "play") return;
     if (block.revealed) return;
     block.flagged = !block.flagged;
   }
@@ -184,28 +168,22 @@ export class GamePlay {
    * 左键点击：首次点击开始计时并布雷；点击雷判负，否则按规则展开
    */
   onClick(block) {
-    if (this.state.value.status == 'ready') {
-      this.state.value.status = 'play';
-      this.state.value.startTime = Date.now();
-      this.timerId = setInterval(() => {
-        this.state.value.timeElapsed = Math.floor(
-          (Date.now() - this.state.value.startTime) / 1000
-        );
-      }, 1000);
+    if (this.state.value.status === "ready") {
+      this.state.value.status = "play";
+      this.startTimer();
     }
 
-    if (this.state.value.status !== 'play' || block.flagged) return;
+    if (this.state.value.status !== "play" || block.flagged || block.revealed)
+      return;
 
+    // 首次点击后再布雷以确保第一步安全
     if (!this.state.value.mineGenerated) {
       this.generateMines(this.board, block);
       this.state.value.mineGenerated = true;
     }
 
     block.revealed = true;
-    if (block.mine) {
-      this.onGameOver('lost');
-      return;
-    }
+    if (block.mine) return this.onGameOver("lost");
 
     this.expendZero(block);
     this.checkGameState();
@@ -216,15 +194,15 @@ export class GamePlay {
    */
   getSiblings(block) {
     return directions
-      .map(([dx, dy]) => {
-        const x2 = block.x + dx;
-        const y2 = block.y + dy;
-        if (x2 < 0 || x2 >= this.width || y2 < 0 || y2 >= this.height)
-          return undefined;
-        return this.board[y2][x2];
-      })
+      .map(([dx, dy]) => this.board[block.y + dy]?.[block.x + dx])
       .filter(Boolean);
   }
+
+  /** 遍历邻居的帮助函数，减少重复代码 */
+  forEachNeighbor(block, cb) {
+    this.getSiblings(block).forEach(cb);
+  }
+
   /** 显示所有雷（用于判负后揭示） */
   showAllMines() {
     for (const block of this.board.flat()) {
@@ -239,13 +217,13 @@ export class GamePlay {
    * 仅在已布雷且游戏进行中时触发
    */
   checkGameState() {
-    if (!this.state.value.mineGenerated || this.state.value.status !== 'play')
+    if (!this.state.value.mineGenerated || this.state.value.status !== "play")
       return;
 
     const blocks = this.board.flat();
 
     if (!blocks.some((block) => !block.mine && !block.revealed))
-      this.onGameOver('won');
+      this.onGameOver("won");
   }
   /**
    * 自动展开邻居（“串联/chord”操作）：
@@ -254,28 +232,21 @@ export class GamePlay {
    * 仅在当前格已翻开时生效
    */
   autoExpand(block) {
-    if (this.state.value.status !== 'play' || block.flagged) return;
+    if (this.state.value.status !== "play" || block.flagged) return;
     if (!block.revealed) return;
 
-    const siblings = this.getSiblings(block);
-    const flags = siblings.reduce((a, b) => a + (b.flagged ? 1 : 0), 0);
-    const notRevealed = siblings.reduce(
-      (a, b) => a + (!b.revealed && !b.flagged ? 1 : 0),
-      0
-    );
-    if (flags === block.adjacentMines) {
-      siblings.forEach((i) => {
-        if (i.revealed || i.flagged) return;
-        i.revealed = true;
-        this.expendZero(i);
-        if (i.mine) this.onGameOver('lost');
+    const neighbors = this.getSiblings(block);
+    const flagCount = neighbors.filter((n) => n.flagged).length;
+    const hidden = neighbors.filter((n) => !n.revealed && !n.flagged);
+
+    if (flagCount === block.adjacentMines) {
+      hidden.forEach((n) => {
+        n.revealed = true;
+        if (n.mine) return this.onGameOver("lost");
+        this.expendZero(n);
       });
-    }
-    const missingFlags = block.adjacentMines - flags;
-    if (notRevealed === missingFlags) {
-      siblings.forEach((i) => {
-        if (!i.revealed && !i.flagged) i.flagged = true;
-      });
+    } else if (hidden.length === block.adjacentMines - flagCount) {
+      hidden.forEach((n) => (n.flagged = true));
     }
     this.checkGameState();
   }
@@ -284,9 +255,24 @@ export class GamePlay {
    */
   onGameOver(status) {
     this.state.value.status = status;
+    this.stopTimer();
+    if (status === "lost") this.showAllMines();
+  }
+
+  startTimer() {
+    if (this.timerId) return;
+    this.state.value.startTime = Date.now();
+    this.state.value.timeElapsed = 0;
+    this.timerId = setInterval(() => {
+      this.state.value.timeElapsed = Math.floor(
+        (Date.now() - this.state.value.startTime) / 1000
+      );
+    }, 1000);
+  }
+
+  stopTimer() {
+    if (!this.timerId) return;
     clearInterval(this.timerId);
-    if (status === 'lost') {
-      this.showAllMines();
-    }
+    this.timerId = null;
   }
 }
