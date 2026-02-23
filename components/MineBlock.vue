@@ -73,4 +73,3 @@ function getBlockClass(block) {
     </div>
   </button>
 </template>
-~/assets/types

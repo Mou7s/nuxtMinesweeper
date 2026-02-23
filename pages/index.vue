@@ -43,7 +43,6 @@
 
 <script setup>
 import { GamePlay } from '../assets/logic.js';
-import '../assets/style.css';
 import ConfettiExplosion from 'vue-confetti-explosion';
 
 const state = computed(() => play.board);
