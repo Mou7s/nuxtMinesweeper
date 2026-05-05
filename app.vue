@@ -17,8 +17,5 @@ useHead({
 });
 </script>
 <template>
-  <NuxtLoadingIndicator></NuxtLoadingIndicator>
-  <main class="py-8 text-center bg-gray-100 dark:bg-gray-900 min-h-screen">
-    <NuxtLayout><NuxtPage></NuxtPage></NuxtLayout>
-  </main>
+  <NuxtPage />
 </template>
