@@ -1,4 +1,5 @@
 import { globalGameServer } from '../utils/gameLogic';
+import { verifyToken } from '../utils/jwt';
 
 export default defineWebSocketHandler({
   async open(peer) {
@@ -15,9 +16,15 @@ export default defineWebSocketHandler({
       await globalGameServer.ensureInitialized();
       const msg = JSON.parse(message.text());
       
-      // 身份识别：登录后前端会发送 identify
+      // 身份识别：登录后前端会发送 JWT token
       if (msg.type === 'identify') {
-        const { userId } = msg.payload;
+        const { token } = msg.payload;
+        const payload = verifyToken(token);
+        if (!payload) {
+          peer.send(JSON.stringify({ type: 'error', message: '身份验证失败，请重新登录' }));
+          return;
+        }
+        const userId = payload.userId;
         (peer as any)._userId = userId;
         await globalGameServer.addPlayer(userId);
         

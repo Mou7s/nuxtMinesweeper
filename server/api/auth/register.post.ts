@@ -1,4 +1,5 @@
 import { globalUserStore } from '../../utils/userStore';
+import { signToken } from '../../utils/jwt';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -19,9 +20,11 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // 简单起见，直接返回用户信息作为凭证（实际项目应使用 JWT）
+  const token = signToken({ id: user.id, username: user.username });
+
   return {
     success: true,
+    token,
     user: {
       id: user.id,
       username: user.username,

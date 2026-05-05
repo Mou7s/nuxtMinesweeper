@@ -33,6 +33,7 @@ export class GamePlay {
   });
   
   user = ref<User | null>(null);
+  token = ref<string | null>(null);
   blocks = new Map<string, any>();
   ws: WebSocket | null = null;
 
@@ -40,7 +41,9 @@ export class GamePlay {
     // 尝试从本地恢复登录状态
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('minesweeper-user');
+      const savedToken = localStorage.getItem('minesweeper-token');
       if (savedUser) this.user.value = JSON.parse(savedUser);
+      if (savedToken) this.token.value = savedToken;
     }
     this.connect();
   }
@@ -77,15 +80,15 @@ export class GamePlay {
   }
 
   sendIdentify() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user.value) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.token.value) {
       this.ws.send(JSON.stringify({
         type: 'identify',
-        payload: { userId: this.user.value.id }
+        payload: { token: this.token.value }
       }));
     }
   }
 
-  handleInit(data) {
+  handleInit(data: any) {
     this.state.value.flags = data.state.flags;
     this.state.value.leaderboard = data.state.leaderboard;
     this.blocks.clear();
@@ -95,13 +98,13 @@ export class GamePlay {
     this.version.value++;
   }
 
-  handleUpdate(data) {
+  handleUpdate(data: any) {
     this.state.value.flags = data.state.flags;
     this.state.value.leaderboard = data.state.leaderboard;
     
     // 更新本地玩家分数（如果排行榜里有我）
     if (this.user.value) {
-      const me = data.state.leaderboard.find(p => p.username === this.user.value.username);
+      const me = data.state.leaderboard.find((p: LeaderboardItem) => p.username === this.user.value!.username);
       if (me) this.user.value.score = me.score;
     }
 
@@ -132,7 +135,7 @@ export class GamePlay {
     else if (playedFlag) playFlag();
   }
 
-  sendAction(action, x, y) {
+  sendAction(action: string, x: number, y: number) {
     if (!this.user.value) {
       alert('请先登录后再操作！');
       return;
@@ -145,37 +148,41 @@ export class GamePlay {
     }
   }
 
-  async login(username, password) {
+  async login(username: string, password: string) {
     try {
-      const res = await $fetch('/api/auth/login', {
+      const res: any = await $fetch('/api/auth/login', {
         method: 'POST',
         body: { username, password }
       });
       if (res.success) {
         this.user.value = res.user;
+        this.token.value = res.token;
         localStorage.setItem('minesweeper-user', JSON.stringify(res.user));
+        localStorage.setItem('minesweeper-token', res.token);
         this.sendIdentify();
         return true;
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(e.data?.statusMessage || '登录失败');
     }
     return false;
   }
 
-  async register(username, password, color) {
+  async register(username: string, password: string, color: string) {
     try {
-      const res = await $fetch('/api/auth/register', {
+      const res: any = await $fetch('/api/auth/register', {
         method: 'POST',
         body: { username, password, color }
       });
       if (res.success) {
         this.user.value = res.user;
+        this.token.value = res.token;
         localStorage.setItem('minesweeper-user', JSON.stringify(res.user));
+        localStorage.setItem('minesweeper-token', res.token);
         this.sendIdentify();
         return true;
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(e.data?.statusMessage || '注册失败');
     }
     return false;
@@ -183,11 +190,13 @@ export class GamePlay {
 
   logout() {
     this.user.value = null;
+    this.token.value = null;
     localStorage.removeItem('minesweeper-user');
+    localStorage.removeItem('minesweeper-token');
     window.location.reload();
   }
 
-  getBlock(x, y) {
+  getBlock(x: number, y: number) {
     const key = `${x},${y}`;
     if (this.blocks.has(key)) return this.blocks.get(key);
 
@@ -202,17 +211,17 @@ export class GamePlay {
     return block;
   }
 
-  onClick(block) {
+  onClick(block: any) {
     if (block.flagged || block.revealed) return;
     this.sendAction('click', block.x, block.y);
   }
 
-  onRightClick(block) {
+  onRightClick(block: any) {
     if (block.revealed) return;
     this.sendAction('rightclick', block.x, block.y);
   }
 
-  autoExpand(block) {
+  autoExpand(block: any) {
     if (block.flagged || !block.revealed) return;
     this.sendAction('autoexpand', block.x, block.y);
   }

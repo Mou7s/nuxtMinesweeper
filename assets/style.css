@@ -58,6 +58,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ===== 高刷新率优化 ===== */
+/* 减少动画/过渡时间适配高刷屏幕 */
+@media (min-resolution: 120dpi) {
+  .face-btn {
+    transition-duration: 0.08s;
+  }
+}
+
 /* ===== Cell Styles ===== */
 .mine-cell {
   width: var(--cell-size);
@@ -69,8 +77,8 @@ body {
   font-size: 16px;
   user-select: none;
   cursor: pointer;
-  /* contain 隔离每个方块的布局/绘制/大小计算，避免一个方块变化导致全屏重排 */
-  contain: strict;
+  /* contain 隔离每个方块的布局/绘制/大小计算 */
+  contain: layout style;
   /* 不加 transition！几百个方块同时跑 transition 是性能杀手 */
 }
 

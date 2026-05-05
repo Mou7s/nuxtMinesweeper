@@ -1,4 +1,5 @@
 import { globalUserStore } from '../../utils/userStore';
+import { signToken } from '../../utils/jwt';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -12,8 +13,11 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const token = signToken({ id: user.id, username: user.username });
+
   return {
     success: true,
+    token,
     user: {
       id: user.id,
       username: user.username,

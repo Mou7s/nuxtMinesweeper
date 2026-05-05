@@ -3,6 +3,9 @@
     :class="cellClass"
     :style="cellStyle"
     @mousedown="onMouseDown"
+    @touchstart.prevent="onTouchStart"
+    @touchend.prevent="onTouchEnd"
+    @touchcancel="onTouchCancel"
   >
     <span v-if="cell.flagged && !cell.revealed" class="text-lg leading-none">🚩</span>
     <span v-else-if="cell.revealed && cell.mine" class="text-lg leading-none">💣</span>
@@ -27,12 +30,63 @@ const props = defineProps<{
   }
 }>();
 
-const emit = defineEmits(['lrclick']);
+const emit = defineEmits(['lrclick', 'longpress']);
 
+// ── Mouse: 双键同时按下 = 自动展开 ──
 const onMouseDown = (event: MouseEvent) => {
   if (event.buttons === 3) emit('lrclick', event);
 };
 
+// ── Touch: 长按 = 插旗 ──
+let touchTimer: ReturnType<typeof setTimeout> | null = null;
+let touchMoved = false;
+let touchStartTime = 0;
+const LONG_PRESS_DURATION = 400; // ms
+
+const onTouchStart = (event: TouchEvent) => {
+  touchMoved = false;
+  touchStartTime = Date.now();
+  
+  touchTimer = setTimeout(() => {
+    // 长按触发 → 插旗（模拟右键）
+    if (!touchMoved) {
+      emit('longpress', event);
+      touchTimer = null;
+    }
+  }, LONG_PRESS_DURATION);
+};
+
+const onTouchEnd = (event: TouchEvent) => {
+  if (touchTimer) {
+    clearTimeout(touchTimer);
+    touchTimer = null;
+    // 短按且未移动 → 由浏览器的 click 事件处理翻开
+    // touchstart.prevent 已阻止了默认行为，需要手动触发 click
+    if (!touchMoved && Date.now() - touchStartTime < LONG_PRESS_DURATION) {
+      (event.target as HTMLElement)?.click();
+    }
+  }
+};
+
+const onTouchCancel = () => {
+  if (touchTimer) {
+    clearTimeout(touchTimer);
+    touchTimer = null;
+  }
+};
+
+// 暴露给父组件用于标记 touchMoved
+const setTouchMoved = () => {
+  touchMoved = true;
+  if (touchTimer) {
+    clearTimeout(touchTimer);
+    touchTimer = null;
+  }
+};
+
+defineExpose({ setTouchMoved });
+
+// ── 样式 ──
 const cellClass = computed(() => {
   const base = 'mine-cell';
   
