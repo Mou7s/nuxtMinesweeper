@@ -64,11 +64,14 @@ const play = new GamePlay();
 const boardRef = ref<any>(null);
 
 onMounted(() => {
-  // 尝试从 localStorage 恢复进度
-  if (play.loadFromStorage() && boardRef.value) {
-    // 恢复最后一次保存的摄像机视角
-    boardRef.value.jumpTo(play.state.value.cameraX || 0, play.state.value.cameraY || 0, false);
-  }
+  // 只从 localStorage 恢复镜头坐标，游戏逻辑数据已经全部在服务端了
+  try {
+    const saved = localStorage.getItem('minesweeper-camera');
+    if (saved && boardRef.value) {
+      const { x, y } = JSON.parse(saved);
+      boardRef.value.jumpTo(x || 0, y || 0, false);
+    }
+  } catch(e) {}
 });
 
 const resetGame = () => {

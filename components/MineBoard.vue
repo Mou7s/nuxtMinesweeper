@@ -32,6 +32,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useElementSize } from '@vueuse/core';
+import { initAudio } from '../assets/audio.js';
 
 const props = defineProps<{
   play: any
@@ -64,6 +65,7 @@ let startGridY = 0;
 let hasDragged = false; // Add a flag to detect actual dragging
 
 const onDragStart = (e: MouseEvent) => {
+  initAudio();
   if (e.button !== 0 && e.button !== 1) return; // Only allow left or middle click to drag
   isDragging.value = true;
   hasDragged = false; // Reset drag flag
@@ -127,10 +129,13 @@ const onDragEnd = () => {
   window.removeEventListener('mousemove', onDragMove);
   window.removeEventListener('mouseup', onDragEnd);
   
-  // 拖拽结束时保存当前视口坐标
+  // 拖拽结束时保存当前视口坐标到本地（仅保存视角，不保存地雷数据）
   props.play.state.value.cameraX = gridOffsetX.value;
   props.play.state.value.cameraY = gridOffsetY.value;
-  props.play.saveToStorage();
+  localStorage.setItem('minesweeper-camera', JSON.stringify({
+    x: gridOffsetX.value,
+    y: gridOffsetY.value
+  }));
   
   // Reset hasDragged flag after a short delay so click events don't fire
   setTimeout(() => {
@@ -140,16 +145,19 @@ const onDragEnd = () => {
 
 const onCellClick = (block: any) => {
   if (hasDragged) return; // Ignore click if we just dragged
+  initAudio();
   props.play.onClick(block);
 };
 
 const onCellRightClick = (block: any) => {
   if (hasDragged) return;
+  initAudio();
   props.play.onRightClick(block);
 };
 
 const onCellLRClick = (block: any) => {
   if (hasDragged) return;
+  initAudio();
   props.play.autoExpand(block);
 };
 
@@ -163,7 +171,9 @@ defineExpose({
     
     props.play.state.value.cameraX = x;
     props.play.state.value.cameraY = y;
-    if (save) props.play.saveToStorage();
+    if (save) {
+      localStorage.setItem('minesweeper-camera', JSON.stringify({ x, y }));
+    }
   }
 });
 </script>
