@@ -1,6 +1,7 @@
 <template>
   <button
     :class="cellClass"
+    :style="cellStyle"
     @mousedown="onMouseDown"
   >
     <span v-if="cell.flagged && !cell.revealed" class="text-lg leading-none">🚩</span>
@@ -22,6 +23,7 @@ const props = defineProps<{
     adjacentMines: number;
     revealed: boolean;
     flagged: boolean;
+    ownerColor?: string;
   }
 }>();
 
@@ -44,6 +46,13 @@ const cellClass = computed(() => {
     return `${base} mine-cell--mine`;
   }
   return `${base} mine-cell--revealed`;
+});
+
+const cellStyle = computed(() => {
+  if (props.cell.revealed && props.cell.ownerColor && !props.cell.mine) {
+    return { borderBottom: `3px solid ${props.cell.ownerColor}` };
+  }
+  return {};
 });
 
 const numClass = computed(() => {

@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   css: ['~/assets/style.css'],
   modules: ['@vueuse/nuxt', '@nuxt/ui'],
   nitro: {
+    storage: {
+      data: {
+        driver: 'fs',
+        base: './data'
+      }
+    },
     experimental: {
       websocket: true
     }

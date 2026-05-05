@@ -95,7 +95,7 @@ pnpm build
 - [x] WebSocket 实时通讯通道 (`server/routes/ws.ts`)
 - [x] 前端降级为纯渲染器（100% 防作弊）
 - [x] 程序化音效系统
-- [ ] 服务端数据持久化（Nitro `unstorage`）
+- [x] 服务端数据持久化（Nitro `unstorage`）
 - [ ] 多玩家光标实时显示
 
 ## 📄 License
