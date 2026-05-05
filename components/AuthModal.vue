@@ -1,64 +1,68 @@
 <template>
   <UModal v-model:open="isOpen">
-    <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
-      <template #header>
-        <div class="flex items-center justify-between">
+    <template #content>
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-4">
           <h3 class="text-xl font-bold text-gray-900 dark:text-white">
             {{ isLogin ? '登录账户' : '注册新玩家' }}
           </h3>
           <p class="text-xs text-gray-500">PVP 模式需要身份标识</p>
         </div>
-      </template>
 
-      <form @submit.prevent="handleSubmit" class="space-y-4 py-2">
-        <UFormField label="用户名" name="username">
-          <UInput v-model="form.username" placeholder="输入你的昵称" icon="i-heroicons-user" required />
-        </UFormField>
-
-        <UFormField label="密码" name="password">
-          <UInput v-model="form.password" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" required />
-        </UFormField>
-        
-        <UFormField v-if="!isLogin" label="确认密码" name="confirmPassword">
-          <UInput v-model="form.confirmPassword" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" required />
-        </UFormField>
-
-        <UFormField v-if="!isLogin" label="选择你的代表色">
-          <div class="flex flex-wrap gap-3 py-1">
-            <button
-              v-for="color in colors"
-              :key="color"
-              type="button"
-              class="w-8 h-8 rounded-full transition-all border-2"
-              :class="form.color === color ? 'border-gray-800 scale-110 shadow-lg' : 'border-transparent hover:scale-105'"
-              :style="{ background: color }"
-              @click="form.color = color"
-            />
+        <form @submit.prevent="handleSubmit" class="space-y-4 py-2">
+          <div class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
+            <UInput v-model="form.username" placeholder="输入你的昵称" icon="i-heroicons-user" required />
           </div>
-        </UFormField>
 
-        <div class="pt-2 flex flex-col gap-3">
-          <UButton 
-            type="submit" 
-            block 
-            :loading="loading" 
-            color="primary"
-            class="py-2.5 font-bold"
-          >
-            {{ isLogin ? '进入游戏' : '立即注册' }}
-          </UButton>
+          <div class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">密码</label>
+            <UInput v-model="form.password" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" required />
+          </div>
+          
+          <div v-if="!isLogin" class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">确认密码</label>
+            <UInput v-model="form.confirmPassword" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" required />
+          </div>
 
-          <UButton 
-            variant="ghost" 
-            block 
-            size="xs"
-            @click="isLogin = !isLogin"
-          >
-            {{ isLogin ? '没有账号？去注册' : '已有账号？去登录' }}
-          </UButton>
-        </div>
-      </form>
-    </UCard>
+          <div v-if="!isLogin" class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">选择你的代表色</label>
+            <div class="flex flex-wrap gap-3 py-1">
+              <button
+                v-for="color in colors"
+                :key="color"
+                type="button"
+                class="w-8 h-8 rounded-full transition-all border-2"
+                :class="form.color === color ? 'border-gray-800 scale-110 shadow-lg' : 'border-transparent hover:scale-105'"
+                :style="{ background: color }"
+                @click="form.color = color"
+              />
+            </div>
+          </div>
+
+          <div class="pt-2 flex flex-col gap-3">
+            <UButton 
+              type="submit" 
+              block 
+              :loading="loading" 
+              color="primary"
+              class="py-2.5 font-bold"
+            >
+              {{ isLogin ? '进入游戏' : '立即注册' }}
+            </UButton>
+
+            <UButton 
+              variant="ghost" 
+              block 
+              size="xs"
+              @click="isLogin = !isLogin"
+            >
+              {{ isLogin ? '没有账号？去注册' : '已有账号？去登录' }}
+            </UButton>
+          </div>
+        </form>
+      </div>
+    </template>
   </UModal>
 </template>
 

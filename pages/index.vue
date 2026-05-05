@@ -145,10 +145,7 @@ onMounted(() => {
     }
   } catch(e) {}
   
-  // 如果没登录，自动弹出登录框
-  setTimeout(() => {
-    if (!play.user.value) authModal.value.open();
-  }, 1000);
+  // 登录框不再自动弹出，用户点击左上角头像区域手动打开
 });
 
 const resetGame = () => {

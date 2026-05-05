@@ -1,5 +1,4 @@
 import { useStorage } from '#imports';
-import { crypto } from 'node:crypto';
 
 export interface User {
   id: string;
@@ -42,7 +41,7 @@ export class UserStore {
       username,
       passwordHash: this.hashPassword(password),
       score: 0,
-      color: color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)],
+      color: (color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)]) as string,
       createdAt: Date.now()
     };
 
