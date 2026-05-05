@@ -1,6 +1,248 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* ===== Design Tokens ===== */
+:root {
+  --cell-size: 38px;
+  --cell-gap: 2px;
+  --cell-total: calc(var(--cell-size) + var(--cell-gap));
+  
+  /* Unrevealed cell */
+  --cell-bg: #c8ccd4;
+  --cell-highlight: rgba(255, 255, 255, 0.65);
+  --cell-shadow: rgba(0, 0, 0, 0.25);
+  --cell-hover: #d4d8e0;
+  
+  /* Revealed cell */
+  --revealed-bg: #e8ecf0;
+  
+  /* Grid background */
+  --grid-bg: #b0b4bc;
+  --board-bg: #bfc3cb;
+  
+  /* Number colors (classic minesweeper) */
+  --num-1: #2563eb;
+  --num-2: #16a34a;
+  --num-3: #dc2626;
+  --num-4: #7c3aed;
+  --num-5: #b91c1c;
+  --num-6: #0891b2;
+  --num-7: #1e1e1e;
+  --num-8: #6b7280;
+}
+
+.dark {
+  --cell-bg: #3a4050;
+  --cell-highlight: rgba(255, 255, 255, 0.12);
+  --cell-shadow: rgba(0, 0, 0, 0.5);
+  --cell-hover: #454b5c;
+  
+  --revealed-bg: #1e2230;
+  
+  --grid-bg: #252a36;
+  --board-bg: #171b26;
+  
+  --num-1: #60a5fa;
+  --num-2: #4ade80;
+  --num-3: #f87171;
+  --num-4: #c084fc;
+  --num-5: #fb923c;
+  --num-6: #22d3ee;
+  --num-7: #e2e8f0;
+  --num-8: #94a3b8;
+}
+
+/* ===== Global ===== */
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Cell Styles ===== */
+.mine-cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  user-select: none;
+  cursor: pointer;
+  /* contain 隔离每个方块的布局/绘制/大小计算，避免一个方块变化导致全屏重排 */
+  contain: strict;
+  /* 不加 transition！几百个方块同时跑 transition 是性能杀手 */
+}
+
+/* Unrevealed - Classic 3D raised button look */
+.mine-cell--hidden {
+  background: var(--cell-bg);
+  box-shadow:
+    inset 2px 2px 0 var(--cell-highlight),
+    inset -2px -2px 0 var(--cell-shadow);
+  border-radius: 2px;
+}
+
+.mine-cell--hidden:hover {
+  background: var(--cell-hover);
+}
+
+.mine-cell--hidden:active {
+  box-shadow: inset 1px 1px 0 var(--cell-shadow);
+}
+
+/* 拖拽地图时禁用方块的 hover/active，防止颜色闪烁 */
+.cursor-grabbing .mine-cell {
+  pointer-events: none;
+}
+
+/* Flagged */
+.mine-cell--flagged {
+  background: var(--cell-bg);
+  box-shadow:
+    inset 2px 2px 0 var(--cell-highlight),
+    inset -2px -2px 0 var(--cell-shadow);
+  border-radius: 2px;
+}
+
+/* Revealed - flat, sunken look */
+.mine-cell--revealed {
+  background: var(--revealed-bg);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+  cursor: default;
+}
+
+/* Mine - red, no animation (animation on N cells kills perf) */
+.mine-cell--mine {
+  background: #dc2626;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Number Colors ===== */
+.mine-num-1 { color: var(--num-1); }
+.mine-num-2 { color: var(--num-2); }
+.mine-num-3 { color: var(--num-3); }
+.mine-num-4 { color: var(--num-4); }
+.mine-num-5 { color: var(--num-5); }
+.mine-num-6 { color: var(--num-6); }
+.mine-num-7 { color: var(--num-7); }
+.mine-num-8 { color: var(--num-8); }
+
+/* ===== HUD ===== */
+.hud-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.dark .hud-panel {
+  background: rgba(20, 24, 36, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-stat--score {
+  background: rgba(250, 204, 21, 0.12);
+}
+.dark .hud-stat--score {
+  background: rgba(250, 204, 21, 0.08);
+}
+
+.hud-stat--flags {
+  background: rgba(239, 68, 68, 0.08);
+}
+.dark .hud-stat--flags {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.hud-stat--coords {
+  background: rgba(59, 130, 246, 0.08);
+}
+.dark .hud-stat--coords {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* ===== Connection indicator ===== */
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: conn-pulse 2s ease-in-out infinite;
+}
+
+.conn-dot--online {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.conn-dot--offline {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  animation: none;
+}
+
+@keyframes conn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ===== Face Button ===== */
+.face-btn {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .face-btn {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.face-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.face-btn:active {
+  transform: scale(0.92);
+}
+
+/* ===== Info pill (no backdrop-filter — saves GPU) ===== */
+.info-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .info-pill {
+  background: rgba(0, 0, 0, 0.6);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ===== Animations ===== */
 .Transition {
   transition-duration: 500ms;
   transition-timing-function: ease-in-out;
