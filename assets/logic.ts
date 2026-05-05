@@ -1,9 +1,30 @@
 import { ref, reactive } from 'vue';
 import { playPop, playExplosion, playFlag } from './audio.js';
 
+export interface User {
+  id: string;
+  username: string;
+  score: number;
+  color: string;
+}
+
+export interface LeaderboardItem {
+  username: string;
+  score: number;
+  color: string;
+}
+
+export interface GameState {
+  flags: number;
+  cameraX: number;
+  cameraY: number;
+  connected: boolean;
+  leaderboard: LeaderboardItem[];
+}
+
 export class GamePlay {
   version = ref(0);
-  state = ref({
+  state = ref<GameState>({
     flags: 0,
     cameraX: 0,
     cameraY: 0,
@@ -11,9 +32,9 @@ export class GamePlay {
     leaderboard: [],
   });
   
-  user = ref(null); // {id, username, score, color}
-  blocks = new Map();
-  ws = null;
+  user = ref<User | null>(null);
+  blocks = new Map<string, any>();
+  ws: WebSocket | null = null;
 
   constructor() {
     // 尝试从本地恢复登录状态
@@ -142,11 +163,11 @@ export class GamePlay {
     return false;
   }
 
-  async register(username, password) {
+  async register(username, password, color) {
     try {
       const res = await $fetch('/api/auth/register', {
         method: 'POST',
-        body: { username, password }
+        body: { username, password, color }
       });
       if (res.success) {
         this.user.value = res.user;

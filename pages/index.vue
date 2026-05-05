@@ -2,7 +2,7 @@
   <div class="relative w-screen h-screen overflow-hidden font-sans" style="background: var(--board-bg);">
     
     <!-- Floating HUD -->
-    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-3 pointer-events-none">
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 pointer-events-none">
       
       <!-- Main Control Panel -->
       <div class="hud-panel rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-auto">
@@ -16,7 +16,7 @@
             v-if="play.user.value"
             :alt="play.user.value.username" 
             size="sm"
-            :ui="{ background: 'bg-white', ring: 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' }"
+            :ui="{ root: 'bg-white ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' }"
             :style="{ '--tw-ring-color': play.user.value.color }"
           />
           <UIcon v-else name="i-heroicons-user-circle" class="w-8 h-8 text-gray-400" />
@@ -62,7 +62,7 @@
     </div>
 
     <!-- Leaderboard (Floating Right) -->
-    <div class="absolute top-4 right-4 z-10 w-48 pointer-events-none hidden md:block">
+    <div class="absolute top-4 right-4 z-50 w-48 pointer-events-none hidden md:block">
       <div class="hud-panel rounded-2xl p-3 pointer-events-auto">
         <div class="flex items-center gap-2 mb-3">
           <UIcon name="i-heroicons-trophy" class="text-yellow-500 w-5 h-5" />
@@ -104,7 +104,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { GamePlay } from '../assets/logic.js';
+import { GamePlay } from '../assets/logic';
 
 const play = new GamePlay();
 const boardRef = ref<any>(null);
@@ -120,7 +120,14 @@ const faceEmoji = computed(() => {
 });
 
 const handleProfileClick = () => {
+  console.log('Profile clicked! play.user.value:', play.user.value);
+  console.log('authModal.value:', authModal.value);
+  
   if (!play.user.value) {
+    if (!authModal.value) {
+      alert('错误：登陆弹窗未就绪 (authModal is null)');
+      return;
+    }
     authModal.value.open();
   } else {
     if (confirm('是否退出登录？')) {

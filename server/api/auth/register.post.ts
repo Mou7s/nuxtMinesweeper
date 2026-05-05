@@ -2,7 +2,7 @@ import { globalUserStore } from '../../utils/userStore';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { username, password } = body;
+  const { username, password, color } = body;
 
   if (!username || !password || username.length < 2) {
     throw createError({
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const user = await globalUserStore.createUser(username, password);
+  const user = await globalUserStore.createUser(username, password, color);
   if (!user) {
     throw createError({
       statusCode: 409,

@@ -10,7 +10,7 @@ export interface User {
   createdAt: number;
 }
 
-const PLAYER_COLORS = [
+export const PLAYER_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
   '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
 ];
@@ -31,7 +31,7 @@ export class UserStore {
     return btoa(password); // 演示版：简单编码。生产环境建议使用 crypto.scrypt
   }
 
-  async createUser(username: string, password: string): Promise<User | null> {
+  async createUser(username: string, password: string, color?: string): Promise<User | null> {
     const storage = this.getStorage();
     const key = `user:${username.toLowerCase()}`;
     
@@ -42,7 +42,7 @@ export class UserStore {
       username,
       passwordHash: this.hashPassword(password),
       score: 0,
-      color: PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)],
+      color: color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)],
       createdAt: Date.now()
     };
 
