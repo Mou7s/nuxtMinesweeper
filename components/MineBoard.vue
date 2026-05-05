@@ -13,6 +13,7 @@
         transform: `translate(${pixelOffsetX - 40}px, ${pixelOffsetY - 40}px)`,
       }"
       v-if="viewportCols > 0"
+      :key="play.version.value"
     >
       <template v-for="y in (viewportRows + 2)" :key="'row-render-'+y">
         <MineCell 
@@ -115,12 +116,21 @@ const onDragMove = (e: MouseEvent) => {
   pixelOffsetY.value = newPixY;
   gridOffsetX.value = newGridX;
   gridOffsetY.value = newGridY;
+  
+  // 实时同步到游戏状态以供外部 UI 显示，但不触发存档以保证性能
+  props.play.state.value.cameraX = newGridX;
+  props.play.state.value.cameraY = newGridY;
 };
 
 const onDragEnd = () => {
   isDragging.value = false;
   window.removeEventListener('mousemove', onDragMove);
   window.removeEventListener('mouseup', onDragEnd);
+  
+  // 拖拽结束时保存当前视口坐标
+  props.play.state.value.cameraX = gridOffsetX.value;
+  props.play.state.value.cameraY = gridOffsetY.value;
+  props.play.saveToStorage();
   
   // Reset hasDragged flag after a short delay so click events don't fire
   setTimeout(() => {
@@ -145,11 +155,15 @@ const onCellLRClick = (block: any) => {
 
 // Expose jump method for "teleporting" to a new continent
 defineExpose({
-  jumpTo(x: number, y: number) {
+  jumpTo(x: number, y: number, save = true) {
     gridOffsetX.value = x;
     gridOffsetY.value = y;
     pixelOffsetX.value = 0;
     pixelOffsetY.value = 0;
+    
+    props.play.state.value.cameraX = x;
+    props.play.state.value.cameraY = y;
+    if (save) props.play.saveToStorage();
   }
 });
 </script>

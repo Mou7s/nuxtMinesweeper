@@ -25,6 +25,7 @@ function stringToSeed(str) {
 }
 
 export class GamePlay {
+  version = ref(0);
   state = ref({
     seed: '',
     status: 'ready',
@@ -67,15 +68,66 @@ export class GamePlay {
       status: "ready", // ready, play, lost
       startTime: null,
       timeElapsed: 0,
-      safeZone: null,
       score: 0, // Score replaces "win"
       flags: 0,
+      cameraX: 0,
+      cameraY: 0,
     };
+    // 绝对不能在这里调用 saveToStorage()！
+    // 因为每次刷新网页时，组件初始化都会执行 new GamePlay() -> reset()
+    // 如果在这里保存，就会把之前浏览器里的旧存档直接用空存档覆盖掉！
   }
 
   respawn() {
     // Keeps the world seed and blocks.
     // Score is NO LONGER reset, allowing players to carry their score to the new continent.
+    this.version.value++; // 强制刷新视图以丢弃旧大陆遗留缓存
+    this.saveToStorage();
+  }
+
+  saveToStorage() {
+    if (typeof window === 'undefined') return;
+    
+    // 只保存被翻开或插旗的格子，以极大地节省存储空间
+    const savedBlocks = [];
+    for (const [key, block] of this.blocks.entries()) {
+      if (block.revealed || block.flagged) {
+        savedBlocks.push([key, block]);
+      }
+    }
+    
+    const data = {
+      state: this.state.value,
+      blocks: savedBlocks
+    };
+    
+    localStorage.setItem('minesweeper-save', JSON.stringify(data));
+  }
+
+  loadFromStorage() {
+    if (typeof window === 'undefined') return false;
+    
+    const save = localStorage.getItem('minesweeper-save');
+    if (!save) return false;
+    
+    try {
+      const data = JSON.parse(save);
+      this.state.value = data.state;
+      
+      this.blocks.clear();
+      for (const [key, blockData] of data.blocks) {
+        this.blocks.set(key, reactive(blockData));
+      }
+      // 恢复计时器
+      if (this.state.value.status === 'play') {
+        this.startTimer();
+      }
+      this.version.value++; // 强制刷新视图
+      return true;
+    } catch (e) {
+      console.error('Failed to load save', e);
+      return false;
+    }
   }
 
   // Get block state, generate if not exists
@@ -137,16 +189,19 @@ export class GamePlay {
   expendZero(block) {
     if (block.adjacentMines) return;
 
+    let changed = false;
     const queue = [block];
     while (queue.length) {
       const current = queue.shift();
       this.forEachNeighbor(current, (neighbor) => {
         if (neighbor.revealed || neighbor.flagged) return;
         neighbor.revealed = true;
+        changed = true;
         this.state.value.score += 1;
         if (!neighbor.adjacentMines) queue.push(neighbor);
       });
     }
+    if (changed) this.saveToStorage();
   }
 
   onRightClick(block) {
@@ -156,6 +211,8 @@ export class GamePlay {
     block.flagged = !block.flagged;
     if (block.flagged) this.state.value.flags++;
     else this.state.value.flags--;
+    
+    this.saveToStorage();
   }
 
   onClick(block) {
@@ -172,16 +229,19 @@ export class GamePlay {
     block.revealed = true;
     if (block.mine) {
       this.state.value.score -= 10; // Penalty for clicking a mine
+      this.saveToStorage();
       return;
     }
 
     this.state.value.score += 1;
     this.expendZero(block);
+    this.saveToStorage();
   }
 
   autoExpand(block) {
     if (this.state.value.status !== "play" || block.flagged || !block.revealed) return;
 
+    let changed = false;
     const neighbors = this.getSiblings(block);
     const flagCount = neighbors.filter((n) => n.flagged).length;
     const hidden = neighbors.filter((n) => !n.revealed && !n.flagged);
@@ -189,6 +249,7 @@ export class GamePlay {
     if (flagCount === block.adjacentMines) {
       hidden.forEach((n) => {
         n.revealed = true;
+        changed = true;
         if (n.mine) {
           this.state.value.score -= 10;
           return;
@@ -200,10 +261,13 @@ export class GamePlay {
       hidden.forEach((n) => {
         if (!n.flagged) {
           n.flagged = true;
+          changed = true;
           this.state.value.flags++;
         }
       });
     }
+    
+    if (changed) this.saveToStorage();
   }
 
   startTimer() {
