@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { initAudio } from '../assets/audio.js';
 
 const props = defineProps<{
   cell: {
@@ -34,6 +35,7 @@ const emit = defineEmits(['lrclick', 'longpress']);
 
 // ── Mouse: 双键同时按下 = 自动展开 ──
 const onMouseDown = (event: MouseEvent) => {
+  initAudio();
   if (event.buttons === 3) emit('lrclick', event);
 };
 
@@ -44,6 +46,7 @@ let touchStartTime = 0;
 const LONG_PRESS_DURATION = 400; // ms
 
 const onTouchStart = (event: TouchEvent) => {
+  initAudio();
   touchMoved = false;
   touchStartTime = Date.now();
   

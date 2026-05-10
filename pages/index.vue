@@ -1,81 +1,96 @@
 <template>
-  <div class="relative w-screen h-screen overflow-hidden font-sans" style="background: var(--board-bg);">
-    
+  <div class="relative w-screen h-screen overflow-hidden font-sans bg-slate-200 dark:bg-slate-950">
+    <!-- Subtle Background Gradient for Glass Effect -->
+    <div class="absolute inset-0 pointer-events-none opacity-50 dark:opacity-20" 
+         style="background: radial-gradient(circle at 50% 50%, #3b82f6 0%, transparent 60%);"></div>
+
     <!-- Floating HUD -->
-    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 pointer-events-none">
+    <div class="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-4 pointer-events-none">
       
       <!-- Main Control Panel -->
-      <div class="hud-panel rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-auto">
+      <div class="hud-panel rounded-3xl px-4 py-2.5 flex items-center gap-3 pointer-events-auto shadow-2xl">
         
         <!-- User Info / Profile -->
         <div 
-          class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+          class="flex items-center gap-3 px-3 py-1.5 hover:bg-white/20 dark:hover:bg-white/5 rounded-2xl cursor-pointer transition-all border border-transparent hover:border-white/30"
           @click="handleProfileClick"
         >
           <UAvatar 
             v-if="play.user.value"
             :alt="play.user.value.username" 
-            size="sm"
-            :ui="{ root: 'bg-white ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' }"
-            :style="{ '--tw-ring-color': play.user.value.color }"
+            size="md"
+            class="ring-2 ring-white/50"
+            :style="{ background: play.user.value.color }"
           />
-          <UIcon v-else name="i-heroicons-user-circle" class="w-8 h-8 text-gray-400" />
-          <div class="flex flex-col leading-tight">
-            <span class="text-xs font-bold text-gray-800 dark:text-gray-100">
-              {{ play.user.value ? play.user.value.username : '未登录' }}
+          <UIcon v-else name="i-heroicons-user-circle" class="w-9 h-9 text-gray-500" />
+          <div class="flex flex-col">
+            <span class="text-sm font-black text-gray-800 dark:text-gray-100 tracking-tight">
+              {{ play.user.value ? play.user.value.username : 'Guest Player' }}
             </span>
-            <span v-if="play.user.value" class="text-[10px] text-gray-500 font-mono">
+            <span v-if="play.user.value" class="text-[11px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest">
               Score: {{ play.user.value.score }}
             </span>
-            <span v-else class="text-[10px] text-blue-500 font-bold">点击登录</span>
+            <span v-else class="text-[10px] text-blue-500 font-bold">CLICK TO LOGIN</span>
           </div>
         </div>
 
-        <div class="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+        <div class="w-px h-10 bg-gray-300/50 dark:bg-gray-700/50 mx-1"></div>
 
         <!-- Face Button -->
         <button class="face-btn" @click="resetGame">
           {{ faceEmoji }}
         </button>
 
-        <div class="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+        <div class="w-px h-10 bg-gray-300/50 dark:bg-gray-700/50 mx-1"></div>
 
         <!-- Flags -->
-        <div class="hud-stat hud-stat--flags">
-          <span class="text-red-500 text-lg">🚩</span>
-          <span class="text-xl font-mono font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">
+        <div class="hud-stat hud-stat--flags px-4 py-2">
+          <span class="text-xl">🚩</span>
+          <span class="text-2xl font-mono font-black text-gray-800 dark:text-gray-100 tracking-tighter">
             {{ String(play.state.value.flags || 0).padStart(3, '0') }}
           </span>
         </div>
       </div>
 
       <!-- Info Bar -->
-      <div class="flex items-center gap-2 pointer-events-auto">
-        <div class="info-pill flex items-center gap-2">
+      <div class="flex items-center gap-3 pointer-events-auto">
+        <div class="info-pill flex items-center gap-2.5 shadow-lg">
           <span class="conn-dot" :class="play.state.value.connected ? 'conn-dot--online' : 'conn-dot--offline'"></span>
-          <span>{{ play.state.value.connected ? 'Online' : 'Connecting...' }}</span>
+          <span class="tracking-widest uppercase">{{ play.state.value.connected ? 'Online' : 'Reconnecting' }}</span>
         </div>
-        <UPopover :popper="{ placement: 'bottom' }">
+        <UPopover :popper="{ placement: 'bottom', offset: 12 }">
           <div 
-            class="info-pill font-mono flex items-center gap-1 cursor-pointer hover:bg-white/90 dark:hover:bg-black/80 transition-colors"
+            class="info-pill font-mono flex items-center gap-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 transition-all shadow-lg active:scale-95"
             @click="syncTeleportCoords"
           >
-            📍 {{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}
+            <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5 text-blue-500" />
+            <span>{{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}</span>
           </div>
           
           <template #content>
-            <div class="p-4 w-48 flex flex-col gap-3">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">传送至坐标</h4>
-              <div class="flex gap-2">
-                <UInput v-model.number="teleportX" placeholder="X" size="sm" class="flex-1" type="number" />
-                <UInput v-model.number="teleportY" placeholder="Y" size="sm" class="flex-1" type="number" />
+            <div class="hud-panel p-6 rounded-3xl w-64 flex flex-col gap-5 border-white/40 dark:border-white/10 shadow-3xl">
+              <div class="flex items-center gap-2 mb-1">
+                <UIcon name="i-heroicons-paper-airplane" class="text-blue-500 w-5 h-5" />
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Teleport</h4>
               </div>
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                  <span class="text-[9px] font-black text-gray-400 uppercase ml-1">Axis X</span>
+                  <UInput v-model.number="teleportX" placeholder="0" size="md" class="font-mono" type="number" />
+                </div>
+                <div class="space-y-1.5">
+                  <span class="text-[9px] font-black text-gray-400 uppercase ml-1">Axis Y</span>
+                  <UInput v-model.number="teleportY" placeholder="0" size="md" class="font-mono" type="number" />
+                </div>
+              </div>
+
               <UButton 
                 block 
-                size="sm" 
+                size="lg" 
                 color="primary" 
-                label="传送" 
-                icon="i-heroicons-paper-airplane" 
+                label="JUMP TO COORDINATES" 
+                class="font-black rounded-xl py-3 shadow-lg shadow-blue-500/20"
                 @click="doTeleport" 
               />
             </div>
@@ -85,32 +100,34 @@
     </div>
 
     <!-- Leaderboard (Floating Right) -->
-    <div class="absolute top-4 right-4 z-50 w-48 pointer-events-none hidden md:block">
-      <div class="hud-panel rounded-2xl p-3 pointer-events-auto">
-        <div class="flex items-center gap-2 mb-3">
-          <UIcon name="i-heroicons-trophy" class="text-yellow-500 w-5 h-5" />
-          <h3 class="text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">排行榜</h3>
+    <div class="absolute top-6 right-6 z-50 w-56 pointer-events-none hidden lg:block">
+      <div class="hud-panel rounded-3xl p-5 pointer-events-auto shadow-2xl">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <UIcon name="i-heroicons-trophy" class="text-yellow-500 w-6 h-6" />
+          </div>
+          <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Leaderboard</h3>
         </div>
-        <div class="space-y-2">
+        <div class="space-y-3">
           <div 
             v-for="(p, i) in play.state.value.leaderboard" 
             :key="p.username"
-            class="flex items-center justify-between text-xs"
+            class="flex items-center justify-between group cursor-default"
           >
-            <div class="flex items-center gap-2 overflow-hidden">
-              <span class="font-mono text-gray-400 w-3">{{ i + 1 }}</span>
-              <span 
-                class="w-2 h-2 rounded-full flex-shrink-0" 
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="font-mono text-[10px] text-gray-400 w-4">{{ i + 1 }}</span>
+              <div 
+                class="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white/20" 
                 :style="{ background: p.color }"
-              ></span>
-              <span class="truncate font-bold text-gray-700 dark:text-gray-200" :title="p.username">
+              ></div>
+              <span class="truncate font-bold text-sm text-gray-700 dark:text-gray-200 group-hover:text-blue-500 transition-colors" :title="p.username">
                 {{ p.username }}
               </span>
             </div>
-            <span class="font-mono font-bold text-blue-600 dark:text-blue-400">{{ p.score }}</span>
+            <span class="font-mono font-black text-sm text-blue-600 dark:text-blue-400">{{ p.score }}</span>
           </div>
-          <div v-if="!play.state.value.leaderboard.length" class="text-center py-4 text-xs text-gray-400">
-            暂无玩家数据
+          <div v-if="!play.state.value.leaderboard.length" class="text-center py-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Waiting for data...
           </div>
         </div>
       </div>
@@ -118,6 +135,35 @@
 
     <!-- The Infinite Board -->
     <MineBoard ref="boardRef" :play="play" class="w-full h-full" />
+
+    <!-- Zoom Control (Bottom Right) -->
+    <div class="absolute bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
+      <div class="hud-panel rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-auto shadow-xl">
+        <button 
+          class="p-2 rounded-xl hover:bg-white/20 dark:hover:bg-white/5 text-gray-500 transition-all active:scale-90"
+          @click="boardRef?.setScale((boardRef?.getScale() || 1) - 0.2)"
+        >
+          <UIcon name="i-heroicons-minus" class="w-5 h-5" />
+        </button>
+        
+        <div 
+          class="px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-all"
+          @click="boardRef?.setScale(1.0)"
+          title="Reset Zoom"
+        >
+          <span class="text-[10px] font-black text-blue-600 dark:text-blue-400 font-mono tracking-tighter">
+            {{ Math.round((boardRef?.getScale() || 1) * 100) }}%
+          </span>
+        </div>
+
+        <button 
+          class="p-2 rounded-xl hover:bg-white/20 dark:hover:bg-white/5 text-gray-500 transition-all active:scale-90"
+          @click="boardRef?.setScale((boardRef?.getScale() || 1) + 0.2)"
+        >
+          <UIcon name="i-heroicons-plus" class="w-5 h-5" />
+        </button>
+      </div>
+    </div>
 
     <!-- Auth Modal -->
     <AuthModal ref="authModal" :play="play" />
@@ -128,6 +174,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { GamePlay } from '../assets/logic';
+import { initAudio, isAudioEnabled } from '../assets/audio.js';
 
 const play = new GamePlay();
 const boardRef = ref<any>(null);

@@ -6,18 +6,32 @@ let audioCtx = null;
 // 初始化音频引擎（必须由用户的真实点击触发）
 export function initAudio() {
   if (typeof window === 'undefined') return;
-  if (!audioCtx) {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new AudioContext();
+  try {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+      console.log('[Audio] Context created:', audioCtx.state);
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => {
+        console.log('[Audio] Context resumed, state:', audioCtx.state);
+      });
+    }
+  } catch (e) {
+    console.error('[Audio] Init error:', e);
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+}
+
+export function isAudioEnabled() {
+  return audioCtx && audioCtx.state === 'running';
 }
 
 // 挖开方块的音效：清脆的“啵”声 (Sine Wave 升频)
 export function playPop() {
   if (!audioCtx) return;
+  // 如果状态是 suspended，尝试在播放前 resume（虽然可能由于缺少 gesture 失败，但不应直接 return）
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
   const osc = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
   
@@ -38,6 +52,8 @@ export function playPop() {
 // 踩雷的音效：沉闷的低音爆炸 (白噪音 + 低通滤波)
 export function playExplosion() {
   if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
   const bufferSize = audioCtx.sampleRate * 0.5; // 0.5s duration
   const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -71,6 +87,8 @@ export function playExplosion() {
 // 插旗音效：高频率短促的“滴”声 (Triangle Wave)
 export function playFlag() {
   if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
   const osc = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
   
