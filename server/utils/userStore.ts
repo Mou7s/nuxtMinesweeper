@@ -1,5 +1,5 @@
 import { useStorage } from '#imports';
-import { scrypt, randomBytes, createCipheriv, createDecipheriv, timingSafeEqual } from 'node:crypto';
+import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export interface User {
   id: string;
@@ -15,11 +15,6 @@ export const PLAYER_COLORS = [
   '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
 ];
 
-// 生产环境应通过环境变量注入密钥
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
-  ? Buffer.from(process.env.ENCRYPTION_KEY, 'hex')
-  : randomBytes(32); // 临时密钥，重启后失效（开发环境用）
-
 export class UserStore {
   private initialized = false;
 
@@ -30,29 +25,6 @@ export class UserStore {
 
   private getStorage() {
     return useStorage('data');
-  }
-
-  // ─── AES-256-GCM 加密 ───────────────────────────────────
-  private encrypt(plaintext: string): string {
-    const iv = randomBytes(16);
-    const cipher = createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
-    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    // 格式: iv:tag:ciphertext (全部 hex)
-    return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
-  }
-
-  private decrypt(ciphertext: string): string {
-    const parts = ciphertext.split(':');
-    const ivHex = parts[0] as string;
-    const tagHex = parts[1] as string;
-    const dataHex = parts[2] as string;
-    const iv = Buffer.from(ivHex, 'hex');
-    const tag = Buffer.from(tagHex, 'hex');
-    const data = Buffer.from(dataHex, 'hex');
-    const decipher = createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
-    decipher.setAuthTag(tag);
-    return decipher.update(data) + decipher.final('utf8');
   }
 
   // ─── 密码哈希 (scrypt) ──────────────────────────────────
@@ -95,20 +67,19 @@ export class UserStore {
       createdAt: Date.now()
     };
 
-    // 加密后存储
-    await storage.setItem(key, this.encrypt(JSON.stringify(user)));
-    await storage.setItem(`userid:${user.id}`, this.encrypt(username.toLowerCase()));
+    // 明文 JSON 存储
+    await storage.setItem(key, user);
+    await storage.setItem(`userid:${user.id}`, username.toLowerCase());
     
     return user;
   }
 
   async validateUser(username: string, password: string): Promise<User | null> {
     const storage = this.getStorage();
-    const encrypted: any = await storage.getItem(`user:${username.toLowerCase()}`);
-    if (!encrypted) return null;
+    const user: any = await storage.getItem(`user:${username.toLowerCase()}`);
+    if (!user) return null;
 
     try {
-      const user: User = JSON.parse(this.decrypt(encrypted));
       const valid = await this.verifyPassword(password, user.passwordHash);
       if (valid) return user;
     } catch (e) {}
@@ -117,14 +88,11 @@ export class UserStore {
 
   async getUserById(id: string): Promise<User | null> {
     const storage = this.getStorage();
-    const encryptedUsername: any = await storage.getItem(`userid:${id}`);
-    if (!encryptedUsername) return null;
+    const username: any = await storage.getItem(`userid:${id}`);
+    if (!username) return null;
 
     try {
-      const username = this.decrypt(encryptedUsername);
-      const encryptedUser: any = await storage.getItem(`user:${username}`);
-      if (!encryptedUser) return null;
-      return JSON.parse(this.decrypt(encryptedUser)) as User;
+      return await storage.getItem(`user:${username}`) as User;
     } catch (e) {
       return null;
     }
@@ -132,17 +100,15 @@ export class UserStore {
 
   async updateScore(id: string, delta: number) {
     const storage = this.getStorage();
-    const encryptedUsername: any = await storage.getItem(`userid:${id}`);
-    if (!encryptedUsername) return;
+    const username: any = await storage.getItem(`userid:${id}`);
+    if (!username) return;
 
     try {
-      const username = this.decrypt(encryptedUsername);
-      const encryptedUser: any = await storage.getItem(`user:${username}`);
-      if (!encryptedUser) return;
+      const user: any = await storage.getItem(`user:${username}`);
+      if (!user) return;
 
-      const user: User = JSON.parse(this.decrypt(encryptedUser));
       user.score += delta;
-      await storage.setItem(`user:${username}`, this.encrypt(JSON.stringify(user)));
+      await storage.setItem(`user:${username}`, user);
     } catch (e) {}
   }
 }
