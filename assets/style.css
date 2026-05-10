@@ -6,20 +6,20 @@
   --cell-size: 38px;
   --cell-gap: 2px;
   --cell-total: calc(var(--cell-size) + var(--cell-gap));
-  
+
   /* Unrevealed cell */
   --cell-bg: #c8ccd4;
   --cell-highlight: rgba(255, 255, 255, 0.65);
   --cell-shadow: rgba(0, 0, 0, 0.25);
   --cell-hover: #d4d8e0;
-  
+
   /* Revealed cell */
   --revealed-bg: #e8ecf0;
-  
+
   /* Grid background */
   --grid-bg: #b0b4bc;
   --board-bg: #bfc3cb;
-  
+
   /* Number colors (classic minesweeper) */
   --num-1: #2563eb;
   --num-2: #16a34a;
@@ -36,12 +36,12 @@
   --cell-highlight: rgba(255, 255, 255, 0.12);
   --cell-shadow: rgba(0, 0, 0, 0.5);
   --cell-hover: #454b5c;
-  
+
   --revealed-bg: #1e2230;
-  
+
   --grid-bg: #252a36;
   --board-bg: #171b26;
-  
+
   --num-1: #60a5fa;
   --num-2: #4ade80;
   --num-3: #f87171;
@@ -127,14 +127,37 @@ body {
 }
 
 /* ===== Number Colors ===== */
-.mine-num-1 { color: var(--num-1); }
-.mine-num-2 { color: var(--num-2); }
-.mine-num-3 { color: var(--num-3); }
-.mine-num-4 { color: var(--num-4); }
-.mine-num-5 { color: var(--num-5); }
-.mine-num-6 { color: var(--num-6); }
-.mine-num-7 { color: var(--num-7); }
-.mine-num-8 { color: var(--num-8); }
+.mine-num-1 {
+  color: var(--num-1);
+}
+
+.mine-num-2 {
+  color: var(--num-2);
+}
+
+.mine-num-3 {
+  color: var(--num-3);
+}
+
+.mine-num-4 {
+  color: var(--num-4);
+}
+
+.mine-num-5 {
+  color: var(--num-5);
+}
+
+.mine-num-6 {
+  color: var(--num-6);
+}
+
+.mine-num-7 {
+  color: var(--num-7);
+}
+
+.mine-num-8 {
+  color: var(--num-8);
+}
 
 /* ===== HUD ===== */
 .hud-panel {
@@ -162,6 +185,7 @@ body {
 .hud-stat--score {
   background: rgba(250, 204, 21, 0.12);
 }
+
 .dark .hud-stat--score {
   background: rgba(250, 204, 21, 0.08);
 }
@@ -169,6 +193,7 @@ body {
 .hud-stat--flags {
   background: rgba(239, 68, 68, 0.08);
 }
+
 .dark .hud-stat--flags {
   background: rgba(239, 68, 68, 0.06);
 }
@@ -176,6 +201,7 @@ body {
 .hud-stat--coords {
   background: rgba(59, 130, 246, 0.08);
 }
+
 .dark .hud-stat--coords {
   background: rgba(59, 130, 246, 0.06);
 }
@@ -200,8 +226,15 @@ body {
 }
 
 @keyframes conn-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ===== Face Button ===== */

@@ -55,9 +55,32 @@
           <span class="conn-dot" :class="play.state.value.connected ? 'conn-dot--online' : 'conn-dot--offline'"></span>
           <span>{{ play.state.value.connected ? 'Online' : 'Connecting...' }}</span>
         </div>
-        <div class="info-pill font-mono flex items-center gap-1">
-          📍 {{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}
-        </div>
+        <UPopover :popper="{ placement: 'bottom' }">
+          <div 
+            class="info-pill font-mono flex items-center gap-1 cursor-pointer hover:bg-white/90 dark:hover:bg-black/80 transition-colors"
+            @click="syncTeleportCoords"
+          >
+            📍 {{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}
+          </div>
+          
+          <template #content>
+            <div class="p-4 w-48 flex flex-col gap-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">传送至坐标</h4>
+              <div class="flex gap-2">
+                <UInput v-model.number="teleportX" placeholder="X" size="sm" class="flex-1" type="number" />
+                <UInput v-model.number="teleportY" placeholder="Y" size="sm" class="flex-1" type="number" />
+              </div>
+              <UButton 
+                block 
+                size="sm" 
+                color="primary" 
+                label="传送" 
+                icon="i-heroicons-paper-airplane" 
+                @click="doTeleport" 
+              />
+            </div>
+          </template>
+        </UPopover>
       </div>
     </div>
 
@@ -109,6 +132,20 @@ import { GamePlay } from '../assets/logic';
 const play = new GamePlay();
 const boardRef = ref<any>(null);
 const authModal = ref<any>(null);
+
+const teleportX = ref(0);
+const teleportY = ref(0);
+
+const syncTeleportCoords = () => {
+  teleportX.value = play.state.value.cameraX;
+  teleportY.value = play.state.value.cameraY;
+};
+
+const doTeleport = () => {
+  if (boardRef.value) {
+    boardRef.value.jumpTo(teleportX.value, teleportY.value);
+  }
+};
 
 const faceEmoji = computed(() => {
   const score = play.user.value?.score || 0;

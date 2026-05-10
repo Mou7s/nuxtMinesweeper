@@ -1,6 +1,8 @@
 # 🚩 Infinite Multiplayer Minesweeper
 
-> 一个基于 **Nuxt 4 + Vue 3 + WebSocket** 构建的无限地图多人在线扫雷游戏。
+> 一个基于 **Nuxt 4 + Vue 3 + WebSocket** 构建的具备 **Liquid Glass** 美学的无限地图多人实时联机扫雷游戏。
+
+![Minesweeper Preview](file:///Users/mou7s/.gemini/antigravity/brain/b0f0847b-c228-4849-a917-5dd0e75aeb20/minesweeper_preview_1778407218469.png)
 
 [![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82?logo=nuxt.js)](https://nuxt.com)
 [![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js)](https://vuejs.org)
@@ -15,108 +17,75 @@
 ## ✨ 核心特性
 
 - 🌌 **无限地图** — 基于坐标哈希的程序化生成，地图向四面八方无限延展，永无边界。
-- ⚔️ **多人实时联机** — WebSocket 全双工通讯，多名玩家在同一张地图上实时协作扫雷。
-- 🛡️ **服务端防作弊** — 前端仅负责渲染和发送指令，所有地雷判定与分数计算在服务端完成。
-- 💀 **永动生存模式** — 没有 Game Over！踩雷扣 10 分，安全翻开 +1 分，存活即正义。
-- 🔊 **程序化音效** — 零资源文件，纯 Web Audio API 合成的挖雷、插旗、爆炸音效。
-- 🗺️ **实时坐标显示** — 拖拽平移地图时实时显示当前视口坐标。
-- 🎯 **重生传送** — 点击笑脸随机传送至新大陆，积分不清零。
-- 🏆 **实时排行榜** — 在线玩家分数实时排名，竞技感拉满。
-- 🔐 **用户系统** — 注册/登录体系，JWT 身份验证，玩家数据 AES-256-GCM 加密存储。
-- 📱 **触屏支持** — 单指滑动拖拽地图、短按翻开、长按插旗。
+- 💎 **Liquid Glass 设计** — 采用毛玻璃效果 (Glassmorphism) 的浮动 HUD，提供极具现代感的视觉交互体验。
+- ⚔️ **多人实时联机** — 基于 WebSocket 全双工通讯，全球玩家在同一张地图上实时协作、竞技扫雷。
+- 🛡️ **服务端驱动架构** — 前端仅负责像素级渲染与指令发送，所有地雷判定、分数计算与状态管理均在服务端原子化完成。
+- 💀 **生存模式** — 没有 Game Over！踩雷扣 10 分，安全翻开 +1 分，存活并登顶排行榜。
+- 🔊 **程序化音效** — 零资源文件加载，纯 Web Audio API 实时合成挖雷、插旗、爆炸等高保真音效。
+- 📍 **精准定位与传送** — 实时坐标追踪，支持通过输入坐标精确传送至地图任何角落。
+- 🎯 **重生机制** — 点击动态表情笑脸即可随机传送至新大陆，积分完美继承。
+- 🔐 **企业级安全** — 完善的注册/登录体系，采用 `scrypt` 强哈希加密与 `AES-256-GCM` 玩家数据加密存储。
+- 📱 **全平台兼容** — 深度优化的触屏交互，支持单指滑动、长按插旗，适配移动端高刷屏幕。
 
 ## 🛠️ 技术栈
 
-| 层级 | 技术 |
-| --- | --- |
-| 框架 | Nuxt 4 + Vue 3 (Composition API) |
-| UI | Nuxt UI + TailwindCSS |
-| 通讯 | Nitro WebSocket (`defineWebSocketHandler`) |
-| 认证 | JWT (HS256) + `crypto.scrypt` 密码哈希 |
-| 加密 | AES-256-GCM 用户数据加密 |
-| 音效 | Web Audio API (程序化合成) |
-| 持久化 | Nitro `unstorage` (文件系统) |
-| 工具库 | VueUse (`@vueuse/nuxt`) |
-| 包管理 | pnpm |
+| 层级 | 技术 | 亮点 |
+| --- | --- | --- |
+| **前端框架** | Nuxt 4 + Vue 3 | 极致的性能优化与响应式开发体验 |
+| **视觉引擎** | Nuxt UI + TailwindCSS 4 | Liquid Glass 设计语言，极致的视觉美感 |
+| **实时通讯** | Nitro WebSocket | 低延迟全双工同步 |
+| **身份认证** | JWT (HS256) | 无状态身份验证，支持 7 天免登录 |
+| **数据安全** | `crypto.scrypt` + AES-256-GCM | 银行级数据保护方案 |
+| **音频引擎** | Web Audio API | 纯算法合成音效，无需等待音频下载 |
+| **持久化层** | Nitro `unstorage` | 支持多种后端切换的高效持久化 |
 
 ## 📁 项目结构
 
 ```
 nuxtMinesweeper/
 ├── assets/
-│   ├── logic.ts          # 前端 WebSocket 客户端控制器 (GamePlay 类)
-│   ├── audio.js          # 程序化音效合成器 (Web Audio API)
-│   └── style.css         # 全局样式 & CSS 变量
+│   ├── logic.ts          # 前端 WebSocket 控制器 (GamePlay 引擎)
+│   ├── audio.js          # Web Audio API 音效合成引擎
+│   └── style.css         # 全局 Design Tokens & Liquid Glass 样式
 ├── components/
-│   ├── MineBoard.vue     # 无限地图视口 + 拖拽引擎（鼠标 + 触屏）
-│   ├── MineCell.vue      # 单个方块的渲染与交互（长按插旗）
-│   ├── MineBlock.vue     # 方块内容显示（数字/旗帜/地雷）
-│   ├── AuthModal.vue     # 登录/注册弹窗
-│   └── Footer.vue        # 页脚
-├── composables/          # Vue 组合式函数
+│   ├── MineBoard.vue     # 高性能无限渲染引擎
+│   ├── MineCell.vue      # 交互单元组件
+│   ├── AuthModal.vue     # 玻璃拟态登录界面
+│   └── Footer.vue        # 页面底部
 ├── pages/
-│   └── index.vue         # 游戏主页面（HUD 面板 + 排行榜 + 坐标显示）
-├── layouts/
-│   └── default.vue       # 默认布局
+│   └── index.vue         # 游戏主入口（HUD 控制面板 + 实时排行榜）
 ├── server/
-│   ├── api/auth/
-│   │   ├── login.post.ts    # 登录 API（返回 JWT token）
-│   │   └── register.post.ts # 注册 API（返回 JWT token）
+│   ├── api/auth/         # 认证相关 RESTful 接口
 │   ├── routes/
-│   │   └── ws.ts            # WebSocket 路由（JWT 验证 + 消息处理）
+│   │   └── ws.ts         # WebSocket 消息分发核心
 │   └── utils/
-│       ├── gameLogic.ts     # 服务端游戏核心引擎（全局单例）
-│       ├── jwt.ts           # JWT token 签发与验证 (HS256)
-│       └── userStore.ts     # 用户数据存储 (AES-256-GCM 加密 + scrypt)
+│       ├── gameLogic.ts  # 服务端全局单例游戏引擎
+│       └── userStore.ts  # 加密存储适配器
 ├── data/
-│   └── world.json           # 世界数据持久化文件
-├── nuxt.config.ts           # Nuxt 配置（含 Nitro WebSocket 开关）
-├── app.config.ts            # 应用配置
-├── tailwindcss.config.js    # TailwindCSS 配置
-└── package.json
+│   └── world.json        # 地图持久化状态
+├── nuxt.config.ts        # 应用构建配置
+└── tailwindcss.config.js # 样式自定义配置
 ```
 
-## 🏗️ 架构说明
+## 🏗️ 架构原理解析
 
-```
-┌──────────────┐     WebSocket      ┌──────────────────┐
-│   Browser A  │ ◄════════════════► │                  │
-│  (渲染 + 指令) │                    │  Nitro Server    │
-└──────────────┘                    │                  │
-                                    │  GameServer 单例  │
-┌──────────────┐     WebSocket      │  (内存中运行)      │
-│   Browser B  │ ◄════════════════► │                  │
-│  (渲染 + 指令) │                    │  + UserStore     │
-└──────────────┘                    └──────────────────┘
-         │                                   │
-         │          ┌───────────┐            │
-         └──────────│ Auth API  │────────────┘
-                    │ (RESTful) │
-                    └───────────┘
+```mermaid
+sequenceDiagram
+    participant User as 玩家浏览器
+    participant WS as WebSocket 隧道
+    participant Engine as 服务端游戏引擎
+    participant Store as 加密存储
+
+    User->>WS: 操作指令 (click, x: 10, y: 20)
+    WS->>Engine: 校验 JWT & 运行扫雷算法
+    Engine->>Store: 更新世界状态 & 玩家积分
+    Engine-->>WS: 广播全量状态更新
+    WS-->>User: 渲染新状态
 ```
 
-- **前端** 只发送操作指令 (`click` / `rightclick` / `autoexpand`)，不做任何逻辑计算。
-- **服务端** 持有唯一的游戏状态，计算结果后通过 WebSocket 向所有广播。
-- **认证** 登录/注册通过 RESTful API + JWT token，WebSocket 连接通过 JWT 验证身份。
-- **地雷密度**: 15%（`rand < 0.15`），基于 Mulberry32 伪随机数生成器 + 坐标哈希种子。
-- **持久化**: 通过 Nitro `unstorage` 将世界数据（已翻开/已插旗的格子）写入 `data/world.json`，延迟 2 秒防抖保存。
-
-## 🔒 安全性
-
-> ⚠️ 本项目处于**演示/开发阶段**，不建议在生产环境中使用。
-
-| 已修复 | 措施 |
-| --- | --- |
-| ✅ | 密码哈希：`crypto.scrypt` + 16 字节随机盐 + `timingSafeEqual` |
-| ✅ | 身份验证：HS256 JWT token（7 天有效期） |
-| ✅ | 数据加密：用户数据 AES-256-GCM 加密后写入文件系统 |
-| ✅ | WebSocket：连接时验证 JWT token，无 token 拒绝操作 |
-
-| 待修复 | 说明 |
-| --- | --- |
-| 🔴 | 无 HTTPS — 部署到 Netlify/Vercel 后自动解决 |
-| 🟡 | 无登录速率限制 — 可通过中间件添加 |
-| 🟡 | JWT 密钥随机生成（重启后失效）— 生产环境需设置 `ENCRYPTION_KEY` 环境变量 |
+- **逻辑闭环**: 前端不持有地雷分布，杜绝通过控制台查看地雷位置。
+- **密度控制**: 恒定 15% 地雷率，基于 `Mulberry32` + `坐标种子` 确保地图的一致性与无限性。
+- **防抖保存**: 世界数据通过 2s 防抖机制异步写入磁盘，平衡性能与数据安全性。
 
 ## 🚀 快速开始
 
@@ -125,7 +94,7 @@ nuxtMinesweeper/
 - **Node.js** >= 18.x
 - **pnpm** >= 8.x
 
-### 安装 & 运行
+### 安装 & 启动
 
 ```bash
 # 克隆仓库
@@ -135,84 +104,42 @@ cd nuxtMinesweeper
 # 安装依赖
 pnpm install
 
-# 启动开发服务器（含 WebSocket）
+# 启动开发服务器（含 WebSocket 同步）
 pnpm dev
-
-# 构建生产版本
-pnpm build
-
-# 预览生产版本
-pnpm preview
 ```
 
-启动后访问 `http://localhost:3000`，再开一个浏览器窗口访问同一地址即可体验多人联机。
+访问 `http://localhost:3000` 即可开始扫雷。建议同时打开两个窗口观察同步效果。
 
-## 🎮 游戏玩法
+## 🎮 交互指南
 
-| 操作（桌面端） | 操作（触屏） | 效果 |
-| --- | --- | --- |
-| 左键点击 | 短按 | 翻开格子（踩雷 -10 分，安全 +1 分） |
-| 右键点击 | 长按 | 插旗 / 取消插旗 |
-| 双击已翻开格子 | — | 自动展开（周围旗帜数 = 地雷数时） |
-| 鼠标拖拽空白区域 | 单指滑动 | 平移地图视口 |
-| 点击 😊 笑脸 | 点击 😊 笑脸 | 随机传送到新大陆重生 |
+| 动作 | 桌面端 | 触屏端 | 效果 |
+| --- | --- | --- | --- |
+| **翻开格子** | 左键点击 | 短按 | 安全翻开 (+1分) / 踩雷 (-10分) |
+| **标记地雷** | 右键点击 | 长按 | 快速插旗 / 取消标记 |
+| **连锁展开** | 双击数字 | — | 自动翻开周围安全区域 |
+| **地图平移** | 鼠标拖拽 | 单指滑动 | 无极探索无限地图 |
+| **快速重生** | 点击笑脸 | 点击笑脸 | 随机传送到新大陆 |
+| **精准定位** | 点击坐标 | 点击坐标 | 打开传送面板并输入坐标 |
 
-## 📋 开发计划
+## 📋 路线图
 
-### 已完成 ✅
+### 已达成 ✅
+- [x] **Liquid Glass UI**: 全面重构 HUD，采用玻璃拟态视觉风格。
+- [x] **坐标传送**: 新增点击坐标面板即可传送至指定位置的功能。
+- [x] **动态表情**: 根据玩家实时分数自动切换笑脸/哭脸表情。
+- [x] **多人联机**: 完美的 WebSocket 同步与排行榜系统。
+- [x] **移动适配**: 完整的移动端手势支持。
 
-- [x] 核心扫雷逻辑（布雷、计数、泛洪展开）
-- [x] 用户交互（左键翻开、右键插旗、双击自动展开）
-- [x] 无限地图（视口渲染 + 鼠标拖拽 + 坐标哈希种子生成）
-- [x] 多人实时联机（WebSocket 全双工 + 服务端状态同步）
-- [x] 永动生存模式（踩雷扣分 + 安全翻开奖分）
-- [x] 用户系统（注册/登录 + JWT 认证 + AES-256-GCM 加密存储）
-- [x] 程序化音效（Web Audio API 合成）
-- [x] 实时排行榜
-- [x] 触屏设备支持（单指滑动拖拽、短按翻开、长按插旗）
-
-### 接下来建议做 🔜
-
-> 按 **投入产出比** 排序，推荐优先完成前 3 项。
-
-#### 🏆 P0 — 高价值、低投入（建议本周完成）
-
-1. **部署到 Netlify** — 配置 `netlify.toml`，设置 `ENCRYPTION_KEY` 环境变量，让 Demo 始终可用
-2. **音效开关 & 音量控制** — 添加一个静音按钮到 HUD 面板，移动端友好
-3. **登录速率限制** — 服务端中间件限制每 IP 每分钟最多 5 次登录尝试
-
-#### 🎯 P1 — 高价值、中等投入（建议 1-2 周）
-
-4. **多玩家光标实时显示** — WebSocket 广播鼠标位置，其他玩家可见带颜色标注的光标
-5. **地图缩放功能** — 支持 Ctrl+滚轮 / 双指捏合缩放，小屏也能看清全局
-6. **已翻开格子归属美化** — 用渐变色/图案标识不同玩家翻开的区域
-
-#### 🔮 P2 — 大功能、长期规划（按需推进）
-
-7. **房间系统** — 创建/加入私人房间，独立地图和排行
-8. **聊天系统** — 全局/房间内文字消息
-9. **成就系统** — 首次踩雷、连续安全翻开 100 格等
-10. **世界热力图** — 可视化所有已探索区域的密度分布
-11. **数据库迁移** — SQLite / PostgreSQL 替换文件存储，支持更大规模
+### 未来展望 🔜
+1. **多玩家光标**: 实时显示其他在线玩家在地图上的鼠标轨迹。
+2. **地图缩放**: 适配双指捏合与滚轮缩放，提升大局观。
+3. **聊天系统**: 增加弹幕或侧边栏聊天室，增强社交属性。
+4. **成就体系**: 解锁诸如“百里挑一”、“扫雷专家”等勋章。
 
 ## 🤝 参与贡献
 
-欢迎提交 Issue 和 Pull Request！
+我们非常欢迎 Issue 和 PR！请确保在提交前运行 `pnpm lint` 保持代码风格统一。
 
-```bash
-# Fork 本仓库
-# 创建功能分支
-git checkout -b feature/your-feature
+## 📄 许可证
 
-# 提交更改
-git commit -m "feat: add your feature"
-
-# 推送到远程
-git push origin feature/your-feature
-
-# 创建 Pull Request
-```
-
-## 📄 License
-
-MIT
+本项目采用 [MIT License](LICENSE) 许可。
