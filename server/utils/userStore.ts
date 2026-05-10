@@ -24,7 +24,7 @@ export class UserStore {
   }
 
   private getStorage() {
-    return useStorage('data');
+    return useStorage('kv');
   }
 
   // ─── 密码哈希 (scrypt) ──────────────────────────────────

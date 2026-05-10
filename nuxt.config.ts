@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['~/assets/style.css'],
-  modules: ['@vueuse/nuxt', '@nuxt/ui'],
+  modules: ['@vueuse/nuxt', '@nuxt/ui', '@nuxthub/core'],
   ignore: ['data/**'],
   vite: {
     server: {
@@ -11,13 +11,10 @@ export default defineNuxtConfig({
       }
     }
   },
+  hub: {
+    kv: true
+  },
   nitro: {
-    storage: {
-      data: {
-        driver: 'fs',
-        base: './data'
-      }
-    },
     experimental: {
       websocket: true
     }

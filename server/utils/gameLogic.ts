@@ -69,7 +69,7 @@ export class GameServer {
 
   async load() {
     try {
-      const storage = useStorage('data');
+      const storage = useStorage('kv');
       const data: any = await storage.getItem('world.json');
       if (data) {
         this.state = data.state;
@@ -88,7 +88,7 @@ export class GameServer {
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(async () => {
       try {
-        const storage = useStorage('data');
+        const storage = useStorage('kv');
         const data = {
           state: this.state,
           blocks: Array.from(this.blocks.values()).filter(b => b.revealed || b.flagged)

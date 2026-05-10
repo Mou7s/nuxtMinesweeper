@@ -1,22 +1,14 @@
 <template>
   <div class="relative w-screen h-screen overflow-hidden font-sans bg-slate-200 dark:bg-slate-950">
-    <!-- Enhanced Background for Glass Effect -->
-    <div class="absolute inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-blue-500/20 blur-[120px] animate-pulse"></div>
-      <div class="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-indigo-500/20 blur-[120px] animate-pulse" style="animation-delay: 2s;"></div>
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] rounded-full bg-purple-500/10 blur-[100px]"></div>
-    </div>
-
-
     <!-- Floating HUD -->
-    <div class="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-4 pointer-events-none">
+    <div class="hud-stack absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2.5 pointer-events-none sm:top-4">
       
       <!-- Main Control Panel -->
-      <div class="hud-panel rounded-3xl px-4 py-2.5 flex items-center gap-3 pointer-events-auto shadow-2xl">
+      <div class="hud-panel hud-main flex items-center gap-2 pointer-events-auto">
         
         <!-- User Info / Profile -->
         <div 
-          class="flex items-center gap-3 px-3 py-1.5 hover:bg-white/30 dark:hover:bg-white/10 rounded-2xl cursor-pointer transition-all border border-transparent hover:border-white/50 group"
+          class="hud-user group"
           @click="handleProfileClick"
         >
           <div class="relative">
@@ -24,14 +16,14 @@
               v-if="play.user.value"
               :alt="play.user.value.username" 
               size="md"
-              class="ring-2 ring-white/50 transition-transform group-hover:scale-110"
+              class="ring-2 ring-white/50 transition-transform group-hover:scale-105"
               :style="{ background: play.user.value.color }"
             />
-            <UIcon v-else name="i-heroicons-user-circle" class="w-9 h-9 text-gray-500/80 group-hover:text-blue-500 transition-colors" />
+            <UIcon v-else name="i-heroicons-user-circle" class="h-9 w-9 text-slate-500/80 transition-colors group-hover:text-blue-500" />
             <div v-if="play.user.value" class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
           </div>
-          <div class="flex flex-col">
-            <span class="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <div class="flex min-w-0 flex-col">
+            <span class="max-w-[118px] truncate text-sm font-black text-slate-800 transition-colors group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">
               {{ play.user.value ? play.user.value.username : 'Guest Player' }}
             </span>
             <div class="flex items-center gap-1.5">
@@ -44,19 +36,19 @@
         </div>
 
 
-        <div class="w-px h-10 bg-gray-300/50 dark:bg-gray-700/50 mx-1"></div>
+        <div class="hud-divider"></div>
 
         <!-- Face Button -->
         <button class="face-btn" @click="resetGame">
           {{ faceEmoji }}
         </button>
 
-        <div class="w-px h-10 bg-gray-300/50 dark:bg-gray-700/50 mx-1"></div>
+        <div class="hud-divider"></div>
 
         <!-- Flags -->
         <div class="hud-stat hud-stat--flags group">
-          <UIcon name="i-heroicons-flag" class="w-5 h-5 text-red-500 group-hover:animate-bounce" />
-          <span class="text-2xl font-mono font-black text-slate-800 dark:text-slate-100 tracking-tighter">
+          <UIcon name="i-heroicons-flag" class="h-4.5 w-4.5 text-red-500" />
+          <span class="font-mono text-xl font-black text-slate-800 dark:text-slate-100">
             {{ String(play.state.value.flags || 0).padStart(3, '0') }}
           </span>
         </div>
@@ -64,23 +56,23 @@
       </div>
 
       <!-- Info Bar -->
-      <div class="flex items-center gap-3 pointer-events-auto">
+      <div class="flex max-w-[calc(100vw-24px)] items-center gap-2 overflow-hidden pointer-events-auto">
         <div class="info-pill flex items-center gap-2.5">
           <span class="conn-dot" :class="play.state.value.connected ? 'conn-dot--online' : 'conn-dot--offline'"></span>
-          <span class="tracking-[0.2em] uppercase text-[9px] font-black">{{ play.state.value.connected ? 'Online' : 'Reconnecting' }}</span>
+          <span class="uppercase text-[9px] font-black">{{ play.state.value.connected ? 'Online' : 'Reconnecting' }}</span>
         </div>
 
         <UPopover :popper="{ placement: 'bottom', offset: 12 }">
           <div 
-            class="info-pill font-mono flex items-center gap-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 transition-all shadow-lg active:scale-95"
+            class="info-pill flex cursor-pointer items-center gap-2 font-mono active:scale-95"
             @click="syncTeleportCoords"
           >
-            <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5 text-blue-500" />
-            <span>{{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}</span>
+            <UIcon name="i-heroicons-map-pin" class="h-3.5 w-3.5 text-blue-500" />
+            <span class="tabular-nums">{{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}</span>
           </div>
           
           <template #content>
-            <div class="hud-panel p-6 rounded-[2rem] w-72 flex flex-col gap-6 shadow-2xl border-white/50">
+            <div class="hud-panel w-72 flex flex-col gap-5 p-5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <div class="p-1.5 rounded-lg bg-blue-500/20 text-blue-500">
@@ -118,15 +110,15 @@
     </div>
 
     <!-- Leaderboard (Floating Right) -->
-    <div class="absolute top-6 right-6 z-50 w-60 pointer-events-none hidden lg:block">
-      <div class="hud-panel rounded-[2rem] p-6 pointer-events-auto">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-2.5 rounded-2xl bg-yellow-500/20 border border-yellow-500/30 shadow-inner">
-            <UIcon name="i-heroicons-trophy" class="text-yellow-600 dark:text-yellow-400 w-6 h-6" />
+    <div class="absolute right-4 top-4 z-50 hidden w-64 pointer-events-none lg:block">
+      <div class="hud-panel hud-side pointer-events-auto">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="hud-icon hud-icon--gold">
+            <UIcon name="i-heroicons-trophy" class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
           </div>
           <div class="flex flex-col">
-            <h3 class="text-xs font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Leaderboard</h3>
-            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Global Ranking</span>
+            <h3 class="text-xs font-black uppercase text-slate-600 dark:text-slate-300">Leaderboard</h3>
+            <span class="text-[9px] font-bold uppercase text-slate-400">Global Ranking</span>
           </div>
         </div>
         <div class="space-y-1.5 max-h-[400px] overflow-y-auto glass-scroll pr-1">
@@ -192,31 +184,31 @@
     <MineBoard ref="boardRef" :play="play" class="w-full h-full" />
 
     <!-- Zoom Control (Bottom Right) -->
-    <div class="absolute bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
-      <div class="hud-panel rounded-2xl px-2 py-2 flex items-center gap-1.5 pointer-events-auto">
+    <div class="absolute bottom-4 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
+      <div class="hud-panel hud-zoom flex items-center gap-1 pointer-events-auto">
         <button 
-          class="p-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-all active:scale-90 group"
+          class="hud-icon-button group"
           @click="boardRef?.setScale((boardRef?.getScale() || 1) - 0.2)"
         >
-          <UIcon name="i-heroicons-minus" class="w-5 h-5 group-hover:text-blue-500" />
+          <UIcon name="i-heroicons-minus" class="h-5 w-5 group-hover:text-blue-500" />
         </button>
         
         <div 
-          class="px-4 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-all group"
+          class="zoom-readout"
           @click="boardRef?.setScale(1.0)"
           title="Reset Zoom"
         >
-          <span class="text-[11px] font-black text-blue-600 dark:text-blue-400 font-mono tracking-tighter">
+          <span class="font-mono text-[11px] font-black text-blue-600 dark:text-blue-300">
             {{ Math.round((boardRef?.getScale() || 1) * 100) }}%
           </span>
         </div>
 
 
         <button 
-          class="p-2 rounded-xl hover:bg-white/20 dark:hover:bg-white/5 text-gray-500 transition-all active:scale-90"
+          class="hud-icon-button"
           @click="boardRef?.setScale((boardRef?.getScale() || 1) + 0.2)"
         >
-          <UIcon name="i-heroicons-plus" class="w-5 h-5" />
+          <UIcon name="i-heroicons-plus" class="h-5 w-5" />
         </button>
       </div>
     </div>
