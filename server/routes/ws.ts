@@ -54,6 +54,26 @@ export default defineWebSocketHandler({
           peer.send(updatePayload);
         }
       }
+
+      if (msg.type === 'cursor') {
+        const userId = (peer as any)._userId;
+        if (!userId) return; // 没登录不显示光标
+
+        const player = globalGameServer.state.leaderboard.find(p => p.username === userId); // 这里假设 userId 就是 username，或者需要通过 userId 查 username
+        // 实际上 identify 时已经把 userId 存到了 peer._userId
+        // 最好是在 identify 时把完整 player 信息存下来或者能查到
+        
+        const { x, y } = msg.payload;
+        peer.publish('minesweeper', JSON.stringify({
+          type: 'cursor',
+          payload: {
+            userId: userId,
+            x, y,
+            color: player?.color || '#3b82f6'
+          }
+        }));
+      }
+
     } catch (e) {
       console.error('[ws] Error:', e);
     }

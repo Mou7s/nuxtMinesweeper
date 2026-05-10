@@ -3,25 +3,33 @@
     <template #content>
       <div class="overflow-hidden">
         <!-- Top Brand Section -->
-        <div class="relative h-32 bg-gradient-to-br from-primary-500 to-blue-600 flex flex-col items-center justify-center text-white overflow-hidden">
-          <div class="absolute inset-0 opacity-20 pointer-events-none">
-            <div class="absolute -top-10 -left-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+        <div class="relative h-40 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 flex flex-col items-center justify-center text-white overflow-hidden">
+          <!-- Animated Background Blobs -->
+          <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-white/20 blur-3xl animate-pulse"></div>
+            <div class="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-blue-400/20 blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
           </div>
-          <div class="text-4xl mb-1 transform hover:scale-110 transition-transform cursor-default">💣</div>
-          <h2 class="text-2xl font-black tracking-tighter uppercase">Infinite Mines</h2>
-          <p class="text-[10px] opacity-80 font-bold tracking-widest uppercase mt-1">Multiplayer Survival</p>
+          
+          <div class="relative z-10 flex flex-col items-center">
+            <div class="text-5xl mb-3 drop-shadow-2xl transform hover:scale-110 transition-transform cursor-default">💣</div>
+            <h2 class="text-2xl font-black tracking-tighter uppercase leading-none">Infinite Mines</h2>
+            <div class="mt-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-sm">
+              <p class="text-[9px] font-black tracking-[0.3em] uppercase">Multiplayer Survival</p>
+            </div>
+          </div>
         </div>
 
-        <div class="p-8">
-          <div class="flex flex-col mb-6">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
-              {{ isLogin ? '欢迎回来' : '创建新玩家' }}
+
+        <div class="p-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+          <div class="flex flex-col mb-8">
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {{ isLogin ? 'Welcome Back' : 'Create Agent' }}
             </h3>
-            <p class="text-sm text-gray-500">
-              {{ isLogin ? '登录以同步你的分数和成就' : '选择一个独特的身份加入无限战场' }}
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+              {{ isLogin ? 'Login to sync your scores & achievements' : 'Join the infinite battlefield' }}
             </p>
           </div>
+
 
           <form @submit.prevent="handleSubmit" class="space-y-5">
             <UFormField label="用户名" size="lg">

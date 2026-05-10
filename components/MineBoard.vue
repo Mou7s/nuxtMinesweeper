@@ -7,7 +7,41 @@
     @mousedown.prevent="onDragStart"
     @touchstart.passive="onTouchStart"
     @wheel.prevent="onWheel"
+    @mousemove="handleLocalMouseMove"
   >
+    <!-- Other Players' Cursors -->
+    <div 
+      class="absolute inset-0 pointer-events-none z-40"
+      :style="{ transform: `scale(${scale}) translate(${pixelOffsetX - cellTotal}px, ${pixelOffsetY - cellTotal}px)`, transformOrigin: '0 0' }"
+    >
+      <div 
+        v-for="(c, id) in play.state.value.cursors" 
+        :key="'cursor-'+id"
+        class="absolute transition-all duration-100 ease-linear pointer-events-none"
+        :style="{ 
+          left: `${(c.x - gridOffsetX + 1) * cellTotal}px`, 
+          top: `${(c.y - gridOffsetY + 1) * cellTotal}px`,
+          zIndex: 100
+        }"
+      >
+        <div class="relative">
+          <!-- Cursor Arrow -->
+          <UIcon 
+            name="i-heroicons-cursor-arrow-rays" 
+            class="w-6 h-6 -translate-x-1 -translate-y-1 drop-shadow-lg"
+            :style="{ color: c.color }"
+          />
+          <!-- User Tag -->
+          <div 
+            class="absolute left-4 top-4 px-1.5 py-0.5 rounded-md text-[10px] font-black text-white whitespace-nowrap shadow-sm"
+            :style="{ background: c.color }"
+          >
+            {{ id }}
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div 
       ref="gridRef"
       class="absolute grid p-0"
@@ -32,7 +66,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useElementSize } from '@vueuse/core';
 import { initAudio } from '../assets/audio.js';
 
 const props = defineProps<{
@@ -182,6 +215,7 @@ const onTouchStart = (e: TouchEvent) => {
   if (e.touches.length === 1) {
     // Single touch: Drag
     const touch = e.touches[0];
+    if (!touch) return;
     touchId1 = touch.identifier;
     touchId2 = null;
     hasDragged = false;
@@ -193,11 +227,16 @@ const onTouchStart = (e: TouchEvent) => {
     startGridY = gridOffsetY.value;
   } else if (e.touches.length === 2) {
     // Multi touch: Pinch
-    touchId1 = e.touches[0].identifier;
-    touchId2 = e.touches[1].identifier;
-    initialDist = getDist(e.touches[0], e.touches[1]);
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    if (!t1 || !t2) return;
+    
+    touchId1 = t1.identifier;
+    touchId2 = t2.identifier;
+    initialDist = getDist(t1, t2);
     initialScale = scale.value;
   }
+
 
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   window.addEventListener('touchend', onTouchEnd);
@@ -250,6 +289,7 @@ const onTouchEnd = (e: TouchEvent) => {
   } else if (e.touches.length === 1) {
     // If one finger remains, reset drag start to that finger's current position
     const touch = e.touches[0];
+    if (!touch) return;
     touchId1 = touch.identifier;
     touchId2 = null;
     startMouseX = touch.clientX;
@@ -263,7 +303,8 @@ const onTouchEnd = (e: TouchEvent) => {
 
 const getTouch = (e: TouchEvent, id: number): Touch | undefined => {
   for (let i = 0; i < e.touches.length; i++) {
-    if (e.touches[i].identifier === id) return e.touches[i];
+    const touch = e.touches[i];
+    if (touch && touch.identifier === id) return touch;
   }
   return undefined;
 };
@@ -305,7 +346,29 @@ const applyDrag = (clientX: number, clientY: number) => {
   props.play.state.value.cameraY = newGridY;
 };
 
+// ── Cursors Logic ────────────────────────────────────────
+let lastCursorEmit = 0;
+const handleLocalMouseMove = (e: MouseEvent) => {
+  const rect = boardRef.value?.getBoundingClientRect();
+  if (!rect) return;
+
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Convert screen pixels to world coordinates
+  const wx = (mx / scale.value - pixelOffsetX.value) / cellTotal + gridOffsetX.value;
+  const wy = (my / scale.value - pixelOffsetY.value) / cellTotal + gridOffsetY.value;
+
+  // Throttle emits to ~20fps (50ms)
+  const now = Date.now();
+  if (now - lastCursorEmit > 50) {
+    props.play.sendCursor(wx, wy);
+    lastCursorEmit = now;
+  }
+};
+
 const saveCameraPosition = () => {
+
   props.play.state.value.cameraX = gridOffsetX.value;
   props.play.state.value.cameraY = gridOffsetY.value;
   localStorage.setItem('minesweeper-camera', JSON.stringify({

@@ -20,7 +20,9 @@ export interface GameState {
   cameraY: number;
   connected: boolean;
   leaderboard: LeaderboardItem[];
+  cursors: Record<string, { x: number, y: number, color: string, lastUpdate: number }>;
 }
+
 
 export class GamePlay {
   version = ref(0);
@@ -30,7 +32,9 @@ export class GamePlay {
     cameraY: 0,
     connected: false,
     leaderboard: [],
+    cursors: {},
   });
+
   
   user = ref<User | null>(null);
   token = ref<string | null>(null);
@@ -69,8 +73,10 @@ export class GamePlay {
         const msg = JSON.parse(event.data);
         if (msg.type === 'init') this.handleInit(msg.data);
         else if (msg.type === 'update') this.handleUpdate(msg.data);
+        else if (msg.type === 'cursor') this.handleCursorUpdate(msg.payload);
         else if (msg.type === 'error') alert(msg.message);
       } catch (e) {}
+
     };
 
     this.ws.onclose = () => {
@@ -147,8 +153,38 @@ export class GamePlay {
       }));
     }
   }
+  
+  handleCursorUpdate(payload: any) {
+    if (this.user.value && payload.userId === this.user.value.username) return;
+    
+    this.state.value.cursors[payload.userId] = {
+      x: payload.x,
+      y: payload.y,
+      color: payload.color,
+      lastUpdate: Date.now()
+    };
+
+    // 清理过期光标（比如 5 秒没更新的）
+    const now = Date.now();
+    for (const id in this.state.value.cursors) {
+      const cursor = this.state.value.cursors[id];
+      if (cursor && now - cursor.lastUpdate > 5000) {
+        delete this.state.value.cursors[id];
+      }
+    }
+  }
+
+  sendCursor(x: number, y: number) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user.value) {
+      this.ws.send(JSON.stringify({
+        type: 'cursor',
+        payload: { x, y }
+      }));
+    }
+  }
 
   async login(username: string, password: string) {
+
     try {
       const res: any = await $fetch('/api/auth/login', {
         method: 'POST',
