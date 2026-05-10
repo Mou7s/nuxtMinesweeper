@@ -260,12 +260,9 @@ const faceEmoji = computed(() => {
 });
 
 const handleProfileClick = () => {
-  console.log('Profile clicked! play.user.value:', play.user.value);
-  console.log('authModal.value:', authModal.value);
-  
   if (!play.user.value) {
     if (!authModal.value) {
-      alert('错误：登陆弹窗未就绪 (authModal is null)');
+      alert('登录弹窗还没准备好，请稍后再试');
       return;
     }
     authModal.value.open();

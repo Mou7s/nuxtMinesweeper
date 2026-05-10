@@ -26,6 +26,7 @@ export default defineWebSocketHandler({
         }
         const userId = payload.userId;
         (peer as any)._userId = userId;
+        (peer as any)._username = payload.username;
         await globalGameServer.addPlayer(userId);
         
         // 广播排行榜更新
@@ -59,15 +60,15 @@ export default defineWebSocketHandler({
         const userId = (peer as any)._userId;
         if (!userId) return; // 没登录不显示光标
 
-        const player = globalGameServer.state.leaderboard.find(p => p.username === userId); // 这里假设 userId 就是 username，或者需要通过 userId 查 username
-        // 实际上 identify 时已经把 userId 存到了 peer._userId
-        // 最好是在 identify 时把完整 player 信息存下来或者能查到
+        const username = (peer as any)._username || userId;
+        const player = globalGameServer.state.leaderboard.find(p => p.username === username);
         
         const { x, y } = msg.payload;
         peer.publish('minesweeper', JSON.stringify({
           type: 'cursor',
           payload: {
             userId: userId,
+            username,
             x, y,
             color: player?.color || '#3b82f6'
           }

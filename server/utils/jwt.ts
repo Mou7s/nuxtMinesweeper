@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto';
 
 // 生产环境应使用环境变量存储密钥
-const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || 'minesweeper_dev_secret_fallback_key_stable';
 const EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
 
 export interface JwtPayload {

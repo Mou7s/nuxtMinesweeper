@@ -20,7 +20,7 @@ export interface GameState {
   cameraY: number;
   connected: boolean;
   leaderboard: LeaderboardItem[];
-  cursors: Record<string, { x: number, y: number, color: string, lastUpdate: number }>;
+  cursors: Record<string, { username: string, x: number, y: number, color: string, lastUpdate: number }>;
 }
 
 
@@ -40,6 +40,7 @@ export class GamePlay {
   token = ref<string | null>(null);
   blocks = new Map<string, any>();
   ws: WebSocket | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // 尝试从本地恢复登录状态
@@ -54,13 +55,17 @@ export class GamePlay {
 
   connect() {
     if (typeof window === 'undefined') return;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     this.ws = new WebSocket(`${protocol}//${host}/ws`);
 
     this.ws.onopen = () => {
-      console.log('Connected!');
       this.state.value.connected = true;
       // 连接成功后立即报到
       if (this.user.value) {
@@ -74,14 +79,26 @@ export class GamePlay {
         if (msg.type === 'init') this.handleInit(msg.data);
         else if (msg.type === 'update') this.handleUpdate(msg.data);
         else if (msg.type === 'cursor') this.handleCursorUpdate(msg.payload);
-        else if (msg.type === 'error') alert(msg.message);
-      } catch (e) {}
+        else if (msg.type === 'error') {
+          alert(msg.message);
+          if (msg.message.includes('身份验证失败') || msg.message.includes('请先登录')) {
+            this.logout();
+          }
+        }
+      } catch (e) {
+        console.warn('[ws] Failed to parse message', e);
+      }
 
     };
 
     this.ws.onclose = () => {
       this.state.value.connected = false;
-      setTimeout(() => this.connect(), 3000);
+      this.ws = null;
+      this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+    };
+
+    this.ws.onerror = () => {
+      this.state.value.connected = false;
     };
   }
 
@@ -135,6 +152,8 @@ export class GamePlay {
         this.blocks.set(key, reactive(b));
       }
     }
+
+    this.version.value++;
     
     if (playedExplosion) playExplosion();
     else if (playedPop) playPop();
@@ -155,9 +174,10 @@ export class GamePlay {
   }
   
   handleCursorUpdate(payload: any) {
-    if (this.user.value && payload.userId === this.user.value.username) return;
+    if (this.user.value && payload.userId === this.user.value.id) return;
     
     this.state.value.cursors[payload.userId] = {
+      username: payload.username || payload.userId,
       x: payload.x,
       y: payload.y,
       color: payload.color,

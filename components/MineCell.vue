@@ -4,6 +4,7 @@
     :style="cellStyle"
     @mousedown="onMouseDown"
     @touchstart.prevent="onTouchStart"
+    @touchmove="onTouchMove"
     @touchend.prevent="onTouchEnd"
     @touchcancel="onTouchCancel"
   >
@@ -57,6 +58,10 @@ const onTouchStart = (event: TouchEvent) => {
       touchTimer = null;
     }
   }, LONG_PRESS_DURATION);
+};
+
+const onTouchMove = () => {
+  setTouchMoved();
 };
 
 const onTouchEnd = (event: TouchEvent) => {
