@@ -116,7 +116,7 @@ pnpm cf:kv:create
 把 `JWT_SECRET` 上传到 Cloudflare Worker：
 
 ```bash
-node - <<'NODE' | pnpm exec wrangler secret put JWT_SECRET --name nuxt-minesweeper
+node - <<'NODE' | pnpm exec wrangler secret put JWT_SECRET --name infinite-minesweeper
 const fs = require('fs')
 const env = fs.readFileSync('.env', 'utf8')
 const match = env.match(/^JWT_SECRET=(.*)$/m)

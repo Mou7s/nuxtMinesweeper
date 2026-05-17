@@ -36,7 +36,13 @@ export default defineNuxtConfig({
       deployConfig: true,
       nodeCompat: true,
       wrangler: {
-        name: 'nuxt-minesweeper',
+        name: 'infinite-minesweeper',
+        routes: [
+          {
+            pattern: 'infiniteminesweeper.mou7s.com',
+            custom_domain: true
+          }
+        ],
         compatibility_flags: ['nodejs_compat'],
         durable_objects: {
           bindings: [

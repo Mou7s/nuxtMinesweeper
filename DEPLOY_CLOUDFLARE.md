@@ -82,7 +82,7 @@ JWT_SECRET
 ## Notes
 
 - Do not use `pnpm generate`; NuxtHub needs a server runtime.
-- The Worker name is set to `nuxt-minesweeper` in `nuxt.config.ts`.
+- The Worker name is set to `infinite-minesweeper` in `nuxt.config.ts`.
 - Plain `pnpm dev` uses local `.data/kv` storage. Cloudflare builds and deployments use the real `KV` binding.
 - World board state is stored in Cloudflare KV. By default, `pnpm dev` uses the `world-dev.json` KV key and Cloudflare builds use `world.json`, so development and production worlds do not overwrite each other.
 - To force a specific world key, set `WORLD_STATE_KEY` in `.env` or in the Worker environment.
