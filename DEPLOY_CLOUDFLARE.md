@@ -64,6 +64,21 @@ pnpm deploy
 
 Wrangler deploys from `.output`; Nitro writes the generated `wrangler.json` under `.output/server` and points Wrangler to it.
 
+## GitHub Actions deploy
+
+This repository includes `.github/workflows/deploy-cloudflare.yml`. Every push to `main` will build and deploy to Cloudflare.
+
+Add these GitHub repository secrets before using it:
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_KV_NAMESPACE_ID
+JWT_SECRET
+```
+
+`CLOUDFLARE_API_TOKEN` needs permission to deploy Workers and read/write Workers KV for the target account.
+
 ## Notes
 
 - Do not use `pnpm generate`; NuxtHub needs a server runtime.
