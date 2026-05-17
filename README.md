@@ -1,8 +1,8 @@
-# Infinite Multiplayer Minesweeper
+# Infinite Minesweeper
 
 一个基于 **Nuxt 4 + Vue 3 + Canvas + WebSocket** 的无限地图多人扫雷游戏。
 
-线上地址：[https://nuxt-minesweeper.mou7s.workers.dev](https://nuxt-minesweeper.mou7s.workers.dev)
+线上地址：[https://infiniteminesweeper.mou7s.com](https://infiniteminesweeper.mou7s.com)
 
 ## 功能
 
@@ -34,7 +34,7 @@
 ## 项目结构
 
 ```text
-nuxtMinesweeper/
+infinite-minesweeper/
 ├── assets/
 │   ├── audio.js          # Web Audio API 音效
 │   ├── logic.ts          # 前端 WebSocket 与游戏状态

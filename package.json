@@ -1,5 +1,5 @@
 {
-  "name": "nuxt-app",
+  "name": "infinite-minesweeper",
   "private": true,
   "scripts": {
     "build": "NODE_OPTIONS=--no-deprecation nuxt build",

@@ -12,7 +12,7 @@
           
           <div class="relative z-10 flex flex-col items-center">
             <div class="text-5xl mb-3 drop-shadow-2xl transform hover:scale-110 transition-transform cursor-default">💣</div>
-            <h2 class="text-2xl font-black tracking-tighter uppercase leading-none">Infinite Mines</h2>
+            <h2 class="text-2xl font-black tracking-tighter uppercase leading-none">Infinite Minesweeper</h2>
             <div class="mt-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-sm">
               <p class="text-[9px] font-black tracking-[0.3em] uppercase">Multiplayer Survival</p>
             </div>
