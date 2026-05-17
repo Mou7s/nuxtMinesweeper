@@ -273,6 +273,7 @@ export class GamePlay {
 
   onClick(block: any) {
     if (block.flagged || block.revealed) return;
+    if (this.user.value) playPop();
     this.sendAction('click', block.x, block.y);
   }
 
@@ -284,6 +285,7 @@ export class GamePlay {
 
   autoExpand(block: any) {
     if (block.flagged || !block.revealed) return;
+    if (this.user.value) playPop();
     this.sendAction('autoexpand', block.x, block.y);
   }
 
