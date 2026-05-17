@@ -222,7 +222,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { GamePlay } from '../assets/logic';
-import { initAudio, isAudioEnabled } from '../assets/audio.js';
+import { installAudioUnlockListeners } from '../assets/audio.js';
 
 const play = new GamePlay();
 const boardRef = ref<any>(null);
@@ -266,6 +266,8 @@ const handleProfileClick = () => {
 };
 
 onMounted(() => {
+  installAudioUnlockListeners();
+
   try {
     const saved = localStorage.getItem('minesweeper-camera');
     if (saved && boardRef.value) {
