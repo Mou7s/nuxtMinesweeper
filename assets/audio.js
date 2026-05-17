@@ -17,6 +17,7 @@ export function initAudio() {
         console.log('[Audio] Context resumed, state:', audioCtx.state);
       });
     }
+    unlockAudio();
   } catch (e) {
     console.error('[Audio] Init error:', e);
   }
@@ -24,6 +25,16 @@ export function initAudio() {
 
 export function isAudioEnabled() {
   return audioCtx && audioCtx.state === 'running';
+}
+
+function unlockAudio() {
+  if (!audioCtx) return;
+
+  const buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start(0);
 }
 
 // 挖开方块的音效：清脆的“啵”声 (Sine Wave 升频)
@@ -104,4 +115,26 @@ export function playFlag() {
   
   osc.start();
   osc.stop(audioCtx.currentTime + 0.03);
+}
+
+// 错旗提示音：短促下滑的 buzz
+export function playMistake() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.12);
+
+  gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.12);
 }

@@ -61,6 +61,7 @@ type Cell = {
   revealed: boolean;
   flagged: boolean;
   ownerColor?: string;
+  flagOwnerColor?: string;
 };
 
 const boardRef = ref<HTMLElement | null>(null);
@@ -243,8 +244,7 @@ const drawCell = (
     drawRaisedCell(context, x, y, highlight, shadow);
 
     if (cell.flagged && !cell.revealed) {
-      context.font = '20px Inter, Segoe UI Emoji, Apple Color Emoji, sans-serif';
-      context.fillText('🚩', x + cellSize / 2, y + cellSize / 2 + 1);
+      drawFlag(context, x, y, cell.flagOwnerColor || '#ef4444');
     }
     return;
   }
@@ -289,6 +289,52 @@ const drawRaisedCell = (
   context.fillStyle = shadow;
   context.fillRect(x, y + cellSize - 2, cellSize, 2);
   context.fillRect(x + cellSize - 2, y, 2, cellSize);
+};
+
+const drawFlag = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+) => {
+  const poleX = x + 14;
+  const poleTop = y + 8;
+  const poleBottom = y + 28;
+
+  context.save();
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  context.shadowColor = 'rgba(15, 23, 42, 0.22)';
+  context.shadowBlur = 2;
+  context.shadowOffsetY = 1;
+
+  context.strokeStyle = '#334155';
+  context.lineWidth = 2.5;
+  context.beginPath();
+  context.moveTo(poleX, poleTop);
+  context.lineTo(poleX, poleBottom);
+  context.stroke();
+
+  context.fillStyle = color;
+  context.beginPath();
+  context.moveTo(poleX + 1, poleTop + 1);
+  context.lineTo(x + 27, y + 12);
+  context.lineTo(poleX + 1, y + 17);
+  context.closePath();
+  context.fill();
+
+  context.shadowColor = 'transparent';
+  context.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  context.beginPath();
+  context.moveTo(poleX + 3, poleTop + 3);
+  context.lineTo(x + 23, y + 12);
+  context.lineTo(poleX + 3, y + 14);
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = '#334155';
+  context.fillRect(x + 9, y + 28, 16, 3);
+  context.restore();
 };
 
 const screenToWorld = (clientX: number, clientY: number) => {

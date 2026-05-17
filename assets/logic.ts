@@ -1,5 +1,5 @@
 import { ref, reactive } from 'vue';
-import { playPop, playExplosion, playFlag } from './audio.js';
+import { playPop, playExplosion, playFlag, playMistake } from './audio.js';
 
 export interface User {
   id: string;
@@ -134,12 +134,15 @@ export class GamePlay {
     let playedExplosion = false;
     let playedPop = false;
     let playedFlag = false;
+    let playedMistake = false;
     
     for (const b of data.updates) {
       const key = `${b.x},${b.y}`;
       const oldBlock = this.blocks.get(key);
       
-      if (!oldBlock || (!oldBlock.revealed && b.revealed)) {
+      if (b.mistake) {
+        playedMistake = true;
+      } else if (!oldBlock || (!oldBlock.revealed && b.revealed)) {
         if (b.mine) playedExplosion = true;
         else playedPop = true;
       } else if (!oldBlock || (oldBlock.flagged !== b.flagged)) {
@@ -155,7 +158,8 @@ export class GamePlay {
 
     this.version.value++;
     
-    if (playedExplosion) playExplosion();
+    if (playedMistake) playMistake();
+    else if (playedExplosion) playExplosion();
     else if (playedPop) playPop();
     else if (playedFlag) playFlag();
   }
@@ -274,6 +278,7 @@ export class GamePlay {
 
   onRightClick(block: any) {
     if (block.revealed) return;
+    playFlag();
     this.sendAction('rightclick', block.x, block.y);
   }
 

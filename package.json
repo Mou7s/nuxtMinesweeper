@@ -2,21 +2,35 @@
   "name": "nuxt-app",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev --host",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "build": "NODE_OPTIONS=--no-deprecation nuxt build",
+    "build:cloudflare": "NODE_OPTIONS=--no-deprecation NITRO_PRESET=cloudflare-durable nuxt build",
+    "cf:kv:create": "node scripts/create-cloudflare-kv.mjs",
+    "deploy": "pnpm build:cloudflare && pnpm exec wrangler --cwd .output deploy",
+    "dev": "NODE_OPTIONS=--no-deprecation nuxt dev --host",
+    "generate": "NODE_OPTIONS=--no-deprecation nuxt generate",
+    "preview": "NODE_OPTIONS=--no-deprecation nuxt preview",
+    "preview:cloudflare": "pnpm build:cloudflare && NODE_OPTIONS=--no-deprecation pnpm exec wrangler --cwd .output dev",
+    "postinstall": "NODE_OPTIONS=--no-deprecation nuxt prepare"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
     "@nuxt/devtools": "latest",
     "@nuxthub/core": "0.10.7",
     "@vueuse/nuxt": "^14.3.0",
-    "nuxt": "^4.4.4"
+    "nuxt": "^4.4.4",
+    "tailwindcss": "4.3.0",
+    "wrangler": "^4.48.0"
   },
   "dependencies": {
     "@nuxt/ui": "^4.7.1",
     "vue-confetti-explosion": "^1.0.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tailwindcss/node": "4.3.0",
+      "@tailwindcss/postcss": "4.3.0",
+      "@tailwindcss/vite": "4.3.0",
+      "tailwindcss": "4.3.0"
+    }
   }
 }

@@ -5,6 +5,9 @@ const directions = [
   [-1, -1], [-1, 0], [-1, 1], [0, 1],
 ] as const;
 
+const WRONG_FLAG_PENALTY = -3;
+const WORLD_STATE_KEY = process.env.WORLD_STATE_KEY || (import.meta.dev ? 'world-dev.json' : 'world.json');
+
 function mulberry32(a: number) {
   return function () {
     var t = (a += 0x6d2b79f5);
@@ -32,6 +35,9 @@ export interface Block {
   flagged: boolean;
   ownerId?: string; // 谁点开了这个格子
   ownerColor?: string;
+  flagOwnerId?: string;
+  flagOwnerColor?: string;
+  mistake?: boolean;
 }
 
 export interface PlayerInfo {
@@ -54,8 +60,10 @@ export class GameServer {
   players = new Map<string, PlayerInfo>();
   
   private currentTickUpdates = new Map<string, Block>();
+  private pendingScoreDeltas = new Map<string, number>();
   private initialized = false;
   private saveTimeout: any = null;
+  private scoreSaveTimeout: any = null;
 
   constructor() {
     console.log('[GameServer] Initializing...');
@@ -70,14 +78,14 @@ export class GameServer {
   async load() {
     try {
       const storage = useStorage('kv');
-      const data: any = await storage.getItem('world.json');
+      const data: any = await storage.getItem(WORLD_STATE_KEY);
       if (data) {
         this.state = data.state;
         this.blocks.clear();
         for (const b of data.blocks) {
           this.blocks.set(`${b.x},${b.y}`, b);
         }
-        console.log('[GameServer] Persistence: Loaded world state.');
+        console.log(`[GameServer] Persistence: Loaded world state from ${WORLD_STATE_KEY}.`);
       }
     } catch (e) {
       console.error('[GameServer] Persistence: Error loading state:', e);
@@ -93,7 +101,7 @@ export class GameServer {
           state: this.state,
           blocks: Array.from(this.blocks.values()).filter(b => b.revealed || b.flagged)
         };
-        await storage.setItem('world.json', data);
+        await storage.setItem(WORLD_STATE_KEY, data);
       } catch (e) {}
     }, 2000);
   }
@@ -138,18 +146,43 @@ export class GameServer {
 
   markUpdated(block: Block) {
     const key = `${block.x},${block.y}`;
-    this.currentTickUpdates.set(key, block);
+    this.currentTickUpdates.set(key, { ...block });
   }
 
-  // 记录并同步分数
-  async addScore(userId: string, delta: number) {
+  // Keep score changes on the hot path in memory, then persist them in a batch.
+  addScore(userId: string, delta: number) {
     const player = this.players.get(userId);
     if (player) {
       player.score += delta;
       player.lastActive = Date.now();
-      await globalUserStore.updateScore(userId, delta);
+      this.pendingScoreDeltas.set(userId, (this.pendingScoreDeltas.get(userId) || 0) + delta);
       this.updateLeaderboard();
+      this.scheduleScoreSave();
     }
+  }
+
+  scheduleScoreSave() {
+    if (this.scoreSaveTimeout) clearTimeout(this.scoreSaveTimeout);
+    this.scoreSaveTimeout = setTimeout(() => {
+      this.scoreSaveTimeout = null;
+      void this.flushScoreDeltas();
+    }, 500);
+  }
+
+  async flushScoreDeltas() {
+    if (this.pendingScoreDeltas.size === 0) return;
+
+    const deltas = Array.from(this.pendingScoreDeltas.entries());
+    this.pendingScoreDeltas.clear();
+
+    await Promise.all(deltas.map(async ([userId, delta]) => {
+      try {
+        await globalUserStore.updateScore(userId, delta);
+      } catch (e) {
+        this.pendingScoreDeltas.set(userId, (this.pendingScoreDeltas.get(userId) || 0) + delta);
+        this.scheduleScoreSave();
+      }
+    }));
   }
 
   updateLeaderboard() {
@@ -209,14 +242,32 @@ export class GameServer {
       this.markUpdated(block);
 
       if (block.mine) {
-        await this.addScore(userId, -10);
+        this.addScore(userId, -10);
       } else {
-        await this.addScore(userId, 1);
+        this.addScore(userId, 1);
         this.expendZero(block, userId);
       }
     } else if (action === 'rightclick') {
       if (block.revealed) return null;
+      if (!block.flagged && !block.mine) {
+        block.revealed = true;
+        block.ownerId = userId;
+        block.ownerColor = this.players.get(userId)?.color;
+        block.mistake = true;
+        this.markUpdated(block);
+        delete block.mistake;
+        this.addScore(userId, WRONG_FLAG_PENALTY);
+        return this.finishAction();
+      }
+
       block.flagged = !block.flagged;
+      if (block.flagged) {
+        block.flagOwnerId = userId;
+        block.flagOwnerColor = this.players.get(userId)?.color;
+      } else {
+        delete block.flagOwnerId;
+        delete block.flagOwnerColor;
+      }
       this.markUpdated(block);
       if (block.flagged) this.state.flags++;
       else this.state.flags--;
@@ -233,15 +284,19 @@ export class GameServer {
           n.ownerColor = this.players.get(userId)?.color;
           this.markUpdated(n);
           if (n.mine) {
-            await this.addScore(userId, -10);
+            this.addScore(userId, -10);
           } else {
-            await this.addScore(userId, 1);
+            this.addScore(userId, 1);
             this.expendZero(n, userId);
           }
         }
       }
     }
 
+    return this.finishAction();
+  }
+
+  finishAction() {
     if (this.currentTickUpdates.size === 0) return null;
 
     this.save();
