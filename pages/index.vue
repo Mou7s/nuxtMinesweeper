@@ -216,17 +216,67 @@
     <!-- Auth Modal -->
     <AuthModal ref="authModal" :play="play" />
 
+    <!-- Performance Debug Panel (Floating Left-Bottom) -->
+    <div v-if="showDebugPanel" class="absolute bottom-4 left-4 z-50 pointer-events-none">
+      <div class="hud-panel hud-perf pointer-events-auto flex flex-col gap-2.5 p-4 w-72 backdrop-blur-md bg-slate-900/80 border border-slate-700/50 rounded-2xl shadow-xl text-white font-mono text-xs">
+        <div class="flex items-center justify-between border-b border-slate-700/50 pb-2">
+          <div class="flex items-center gap-1.5 font-black uppercase text-blue-400">
+            <UIcon name="i-heroicons-cpu-chip" class="h-4 w-4 animate-pulse" />
+            <span>Perf Metrics</span>
+          </div>
+          <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">DEBUG MODE</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-y-2 gap-x-4">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] text-slate-400 uppercase font-black">FPS</span>
+            <span class="text-sm font-black tabular-nums" :class="fpsColor">{{ play.state.value.perf.fps }}</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] text-slate-400 uppercase font-black">Draw Time</span>
+            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.drawTime.toFixed(1) }} ms</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] text-slate-400 uppercase font-black">Visible Cells</span>
+            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.visibleCells }}</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] text-slate-400 uppercase font-black">Cached Cells</span>
+            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.cachedCells }}</span>
+          </div>
+          <div class="flex flex-col gap-0.5 col-span-2 border-t border-slate-800 pt-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[9px] text-slate-400 uppercase font-black">Last WS Size</span>
+              <span class="font-bold text-slate-300 tabular-nums">{{ formatBytes(play.state.value.perf.lastWsMsgSize) }}</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-0.5 col-span-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[9px] text-slate-400 uppercase font-black">Last Update Count</span>
+              <span class="font-bold text-slate-300 tabular-nums">{{ play.state.value.perf.lastUpdateCellCount }} cells</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-0.5 col-span-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[9px] text-slate-400 uppercase font-black">WS Msg Process</span>
+              <span class="font-bold text-slate-300 tabular-nums" :class="wsDurationColor">{{ play.state.value.perf.lastWsMsgDuration.toFixed(1) }} ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { GamePlay } from '../assets/logic';
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { GamePlay } from '../assets/logic.js';
 import { installAudioUnlockListeners } from '../assets/audio.js';
 
 const play = new GamePlay();
-const boardRef = ref<any>(null);
-const authModal = ref<any>(null);
+const boardRef = ref(null);
+const authModal = ref(null);
 
 const teleportX = ref(0);
 const teleportY = ref(0);
@@ -265,6 +315,48 @@ const handleProfileClick = () => {
   }
 };
 
+const showDebugPanel = ref(false);
+
+const fpsColor = computed(() => {
+  const currentFps = play.state.value.perf.fps;
+  if (currentFps >= 55) return 'text-green-400';
+  if (currentFps >= 30) return 'text-yellow-400';
+  return 'text-red-400';
+});
+
+const wsDurationColor = computed(() => {
+  const duration = play.state.value.perf.lastWsMsgDuration;
+  if (duration < 16) return 'text-green-400';
+  if (duration < 50) return 'text-yellow-400';
+  return 'text-red-400';
+});
+
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+let fpsFrame = null;
+const startFpsMeter = () => {
+  let lastTime = performance.now();
+  let frames = 0;
+  
+  const updateFps = () => {
+    frames++;
+    const now = performance.now();
+    if (now >= lastTime + 1000) {
+      play.state.value.perf.fps = Math.round((frames * 1000) / (now - lastTime));
+      frames = 0;
+      lastTime = now;
+    }
+    fpsFrame = requestAnimationFrame(updateFps);
+  };
+  fpsFrame = requestAnimationFrame(updateFps);
+};
+
 onMounted(() => {
   installAudioUnlockListeners();
 
@@ -276,7 +368,22 @@ onMounted(() => {
     }
   } catch(e) {}
   
+  // 检查是否显示调试面板
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDev = process.dev;
+  showDebugPanel.value = isDev || urlParams.get('debug') === 'perf';
+
+  if (showDebugPanel.value) {
+    startFpsMeter();
+  }
+  
   // 登录框不再自动弹出，用户点击左上角头像区域手动打开
+});
+
+onUnmounted(() => {
+  if (fpsFrame) {
+    cancelAnimationFrame(fpsFrame);
+  }
 });
 
 const resetGame = () => {

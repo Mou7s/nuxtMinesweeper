@@ -25,8 +25,8 @@ export default defineWebSocketHandler({
           return;
         }
         const userId = payload.userId;
-        (peer as any)._userId = userId;
-        (peer as any)._username = payload.username;
+        (peer)._userId = userId;
+        (peer)._username = payload.username;
         await globalGameServer.addPlayer(userId);
         
         // 广播排行榜更新
@@ -40,27 +40,42 @@ export default defineWebSocketHandler({
       }
 
       if (msg.type === 'action') {
-        const userId = (peer as any)._userId;
+        const userId = (peer)._userId;
         if (!userId) {
           peer.send(JSON.stringify({ type: 'error', message: '请先登录后再进行操作' }));
           return;
         }
 
+        const startTime = performance.now();
         const { action, x, y } = msg.payload;
         const result = await globalGameServer.processAction(action, x, y, userId);
+        const duration = performance.now() - startTime;
         
         if (result) {
+          const updateCount = result.updates ? result.updates.length : 0;
           const updatePayload = JSON.stringify({ type: 'update', data: result });
+          const payloadSize = updatePayload.length;
+
+          if (payloadSize > 100 * 1024) {
+            console.warn(`[ws-perf-server] Large message generated for action "${action}": ${(payloadSize / 1024).toFixed(2)}KB (exceeds 100KB)`);
+          }
+          if (updateCount > 500) {
+            console.warn(`[ws-perf-server] Large update generated for action "${action}": ${updateCount} cells (exceeds 500)`);
+          }
+          if (duration > 50) {
+            console.warn(`[ws-perf-server] Slow action execution for "${action}": ${duration.toFixed(2)}ms (exceeds 50ms)`);
+          }
+
           peer.publish('minesweeper', updatePayload);
           peer.send(updatePayload);
         }
       }
 
       if (msg.type === 'cursor') {
-        const userId = (peer as any)._userId;
+        const userId = (peer)._userId;
         if (!userId) return; // 没登录不显示光标
 
-        const username = (peer as any)._username || userId;
+        const username = (peer)._username || userId;
         const player = globalGameServer.state.leaderboard.find(p => p.username === username);
         
         const { x, y } = msg.payload;

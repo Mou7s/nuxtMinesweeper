@@ -16,37 +16,27 @@
   </button>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue';
 import { initAudio } from '../assets/audio.js';
 
-const props = defineProps<{
-  cell: {
-    x: number;
-    y: number;
-    mine: boolean;
-    adjacentMines: number;
-    revealed: boolean;
-    flagged: boolean;
-    ownerColor?: string;
-  }
-}>();
+const props = defineProps({ cell: Object });
 
 const emit = defineEmits(['lrclick', 'longpress']);
 
 // ── Mouse: 双键同时按下 = 自动展开 ──
-const onMouseDown = (event: MouseEvent) => {
+const onMouseDown = (event) => {
   initAudio();
   if (event.buttons === 3) emit('lrclick', event);
 };
 
 // ── Touch: 长按 = 插旗 ──
-let touchTimer: ReturnType<typeof setTimeout> | null = null;
+let touchTimer = null;
 let touchMoved = false;
 let touchStartTime = 0;
 const LONG_PRESS_DURATION = 400; // ms
 
-const onTouchStart = (event: TouchEvent) => {
+const onTouchStart = (event) => {
   initAudio();
   touchMoved = false;
   touchStartTime = Date.now();
@@ -64,14 +54,14 @@ const onTouchMove = () => {
   setTouchMoved();
 };
 
-const onTouchEnd = (event: TouchEvent) => {
+const onTouchEnd = (event) => {
   if (touchTimer) {
     clearTimeout(touchTimer);
     touchTimer = null;
     // 短按且未移动 → 由浏览器的 click 事件处理翻开
     // touchstart.prevent 已阻止了默认行为，需要手动触发 click
     if (!touchMoved && Date.now() - touchStartTime < LONG_PRESS_DURATION) {
-      (event.target as HTMLElement)?.click();
+      event.target?.click();
     }
   }
 };

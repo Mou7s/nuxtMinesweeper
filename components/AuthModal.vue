@@ -117,12 +117,10 @@
   </UModal>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive } from 'vue';
 
-const props = defineProps<{
-  play: any
-}>();
+const props = defineProps({ play: Object });
 
 const isOpen = ref(false);
 const isLogin = ref(true);

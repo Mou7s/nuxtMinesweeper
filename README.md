@@ -37,7 +37,7 @@
 infinite-minesweeper/
 ├── assets/
 │   ├── audio.js          # Web Audio API 音效
-│   ├── logic.ts          # 前端 WebSocket 与游戏状态
+│   ├── logic.js          # 前端 WebSocket 与游戏状态
 │   └── style.css         # 全局样式
 ├── components/
 │   ├── AuthModal.vue     # 登录/注册弹窗
@@ -48,15 +48,15 @@ infinite-minesweeper/
 │   └── index.vue         # 游戏主页面
 ├── server/
 │   ├── api/auth/         # 登录/注册接口
-│   ├── routes/ws.ts      # WebSocket 入口
+│   ├── routes/ws.js      # WebSocket 入口
 │   └── utils/
-│       ├── gameLogic.ts  # 服务端游戏逻辑
-│       ├── jwt.ts        # JWT 签发与校验
-│       └── userStore.ts  # 用户存储
+│       ├── gameLogic.js  # 服务端游戏逻辑
+│       ├── jwt.js        # JWT 签发与校验
+│       └── userStore.js  # 用户存储
 ├── scripts/
 │   └── create-cloudflare-kv.mjs
 ├── DEPLOY_CLOUDFLARE.md
-├── nuxt.config.ts
+├── nuxt.config.js
 └── package.json
 ```
 

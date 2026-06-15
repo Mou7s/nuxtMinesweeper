@@ -3,21 +3,21 @@ import { globalUserStore } from './userStore';
 const directions = [
   [1, 1], [1, 0], [1, -1], [0, -1],
   [-1, -1], [-1, 0], [-1, 1], [0, 1],
-] as const;
+];
 
 const WRONG_FLAG_PENALTY = -3;
-const WORLD_STATE_KEY = process.env.WORLD_STATE_KEY || (import.meta.dev ? 'world-dev.json' : 'world.json');
+const WORLD_STATE_KEY = import.meta.env.WORLD_STATE_KEY || (import.meta.dev ? 'world-dev.json' : 'world.json');
 
-function mulberry32(a: number) {
+function mulberry32(a) {
   return function () {
-    var t = (a += 0x6d2b79f5);
+    let t = (a += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-function stringToSeed(str: string) {
+function stringToSeed(str) {
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++) {
     h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
@@ -26,44 +26,22 @@ function stringToSeed(str: string) {
   return h;
 }
 
-export interface Block {
-  x: number;
-  y: number;
-  mine: boolean;
-  adjacentMines: number;
-  revealed: boolean;
-  flagged: boolean;
-  ownerId?: string; // 谁点开了这个格子
-  ownerColor?: string;
-  flagOwnerId?: string;
-  flagOwnerColor?: string;
-  mistake?: boolean;
-}
-
-export interface PlayerInfo {
-  id: string;
-  username: string;
-  color: string;
-  score: number;
-  lastActive: number;
-}
-
 export class GameServer {
   state = {
     seed: Math.random().toString(36).substring(2, 8),
     flags: 0,
     startTime: Date.now(),
-    leaderboard: [] as any[] // [{username, score, color}]
+    leaderboard: [] // [{username, score, color}]
   };
   
-  blocks = new Map<string, Block>();
-  players = new Map<string, PlayerInfo>();
+  blocks = new Map();
+  players = new Map();
   
-  private currentTickUpdates = new Map<string, Block>();
-  private pendingScoreDeltas = new Map<string, number>();
-  private initialized = false;
-  private saveTimeout: any = null;
-  private scoreSaveTimeout: any = null;
+  currentTickUpdates = new Map();
+  pendingScoreDeltas = new Map();
+  initialized = false;
+  saveTimeout = null;
+  scoreSaveTimeout = null;
 
   constructor() {
     console.log('[GameServer] Initializing...');
@@ -78,7 +56,7 @@ export class GameServer {
   async load() {
     try {
       const storage = useStorage('kv');
-      const data: any = await storage.getItem(WORLD_STATE_KEY);
+      const data = await storage.getItem(WORLD_STATE_KEY);
       if (data) {
         this.state = data.state;
         this.blocks.clear();
@@ -106,15 +84,15 @@ export class GameServer {
     }, 2000);
   }
 
-  isMine(x: number, y: number) {
+  isMine(x, y) {
     const coordSeed = stringToSeed(`${x},${y},${this.state.seed}`);
     const rand = mulberry32(coordSeed)();
     return rand < 0.15;
   }
 
-  getBlock(x: number, y: number): Block {
+  getBlock(x, y) {
     const key = `${x},${y}`;
-    if (this.blocks.has(key)) return this.blocks.get(key)!;
+    if (this.blocks.has(key)) return this.blocks.get(key);
 
     const isMine = this.isMine(x, y);
     let adjacentMines = 0;
@@ -124,7 +102,7 @@ export class GameServer {
       }
     }
 
-    const block: Block = {
+    const block = {
       x, y,
       mine: isMine,
       adjacentMines,
@@ -136,21 +114,21 @@ export class GameServer {
     return block;
   }
 
-  getSiblings(block: Block) {
+  getSiblings(block) {
     return directions.map(([dx, dy]) => this.getBlock(block.x + dx, block.y + dy));
   }
 
-  forEachNeighbor(block: Block, cb: (n: Block) => void) {
+  forEachNeighbor(block, cb) {
     this.getSiblings(block).forEach(cb);
   }
 
-  markUpdated(block: Block) {
+  markUpdated(block) {
     const key = `${block.x},${block.y}`;
     this.currentTickUpdates.set(key, { ...block });
   }
 
   // Keep score changes on the hot path in memory, then persist them in a batch.
-  addScore(userId: string, delta: number) {
+  addScore(userId, delta) {
     const player = this.players.get(userId);
     if (player) {
       player.score += delta;
@@ -193,12 +171,12 @@ export class GameServer {
     this.state.leaderboard = list;
   }
 
-  expendZero(block: Block, userId: string) {
+  expendZero(block, userId) {
     if (block.adjacentMines) return;
 
     const queue = [block];
     while (queue.length) {
-      const current = queue.shift()!;
+      const current = queue.shift();
       this.forEachNeighbor(current, (neighbor) => {
         if (neighbor.revealed || neighbor.flagged) return;
         neighbor.revealed = true;
@@ -211,7 +189,7 @@ export class GameServer {
     }
   }
 
-  async addPlayer(userId: string) {
+  async addPlayer(userId) {
     const user = await globalUserStore.getUserById(userId);
     if (user && !this.players.has(userId)) {
       this.players.set(userId, {
@@ -226,7 +204,7 @@ export class GameServer {
   }
 
   // Handle a action from a specific user
-  async processAction(action: string, x: number, y: number, userId: string) {
+  async processAction(action, x, y, userId) {
     if (!userId) return null;
     await this.addPlayer(userId);
 

@@ -1,46 +1,33 @@
 import { ref, reactive } from 'vue';
 import { playPop, playExplosion, playFlag, playMistake } from './audio.js';
 
-export interface User {
-  id: string;
-  username: string;
-  score: number;
-  color: string;
-}
-
-export interface LeaderboardItem {
-  username: string;
-  score: number;
-  color: string;
-}
-
-export interface GameState {
-  flags: number;
-  cameraX: number;
-  cameraY: number;
-  connected: boolean;
-  leaderboard: LeaderboardItem[];
-  cursors: Record<string, { username: string, x: number, y: number, color: string, lastUpdate: number }>;
-}
-
 
 export class GamePlay {
   version = ref(0);
-  state = ref<GameState>({
+  state = ref({
     flags: 0,
     cameraX: 0,
     cameraY: 0,
     connected: false,
     leaderboard: [],
     cursors: {},
+    perf: {
+      fps: 0,
+      visibleCells: 0,
+      cachedCells: 0,
+      lastWsMsgSize: 0,
+      lastUpdateCellCount: 0,
+      lastWsMsgDuration: 0,
+      drawTime: 0,
+    }
   });
 
   
-  user = ref<User | null>(null);
-  token = ref<string | null>(null);
-  blocks = new Map<string, any>();
-  ws: WebSocket | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  user = ref(null);
+  token = ref(null);
+  blocks = new Map();
+  ws = null;
+  reconnectTimer = null;
 
   constructor() {
     // 尝试从本地恢复登录状态
@@ -74,21 +61,48 @@ export class GamePlay {
     };
 
     this.ws.onmessage = (event) => {
+      const startTime = performance.now();
+      const rawLength = typeof event.data === 'string' ? event.data.length : 0;
+      this.state.value.perf.lastWsMsgSize = rawLength;
+
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'init') this.handleInit(msg.data);
-        else if (msg.type === 'update') this.handleUpdate(msg.data);
-        else if (msg.type === 'cursor') this.handleCursorUpdate(msg.payload);
-        else if (msg.type === 'error') {
+        
+        let updateCount = 0;
+        if (msg.type === 'init') {
+          updateCount = msg.data?.blocks ? msg.data.blocks.length : 0;
+          this.handleInit(msg.data);
+        } else if (msg.type === 'update') {
+          updateCount = msg.data?.updates ? msg.data.updates.length : 0;
+          this.handleUpdate(msg.data);
+        } else if (msg.type === 'cursor') {
+          this.handleCursorUpdate(msg.payload);
+        } else if (msg.type === 'error') {
           alert(msg.message);
           if (msg.message.includes('身份验证失败') || msg.message.includes('请先登录')) {
             this.logout();
           }
         }
+
+        const duration = performance.now() - startTime;
+        this.state.value.perf.lastWsMsgDuration = duration;
+
+        if (msg.type === 'init' || msg.type === 'update') {
+          this.state.value.perf.lastUpdateCellCount = updateCount;
+
+          if (rawLength > 100 * 1024) {
+            console.warn(`[ws-perf-client] Large message received: ${msg.type}, size: ${(rawLength / 1024).toFixed(2)}KB (exceeds 100KB)`);
+          }
+          if (updateCount > 500) {
+            console.warn(`[ws-perf-client] Large update received: ${msg.type}, cells updated: ${updateCount} (exceeds 500)`);
+          }
+          if (duration > 50) {
+            console.warn(`[ws-perf-client] Slow message processing: ${msg.type}, took: ${duration.toFixed(2)}ms (exceeds 50ms)`);
+          }
+        }
       } catch (e) {
         console.warn('[ws] Failed to parse message', e);
       }
-
     };
 
     this.ws.onclose = () => {
@@ -111,23 +125,24 @@ export class GamePlay {
     }
   }
 
-  handleInit(data: any) {
+  handleInit(data) {
     this.state.value.flags = data.state.flags;
     this.state.value.leaderboard = data.state.leaderboard;
     this.blocks.clear();
     for (const b of data.blocks) {
       this.blocks.set(`${b.x},${b.y}`, reactive(b));
     }
+    this.state.value.perf.cachedCells = this.blocks.size;
     this.version.value++;
   }
 
-  handleUpdate(data: any) {
+  handleUpdate(data) {
     this.state.value.flags = data.state.flags;
     this.state.value.leaderboard = data.state.leaderboard;
     
     // 更新本地玩家分数（如果排行榜里有我）
     if (this.user.value) {
-      const me = data.state.leaderboard.find((p: LeaderboardItem) => p.username === this.user.value!.username);
+      const me = data.state.leaderboard.find((p) => p.username === this.user.value.username);
       if (me) this.user.value.score = me.score;
     }
 
@@ -156,6 +171,7 @@ export class GamePlay {
       }
     }
 
+    this.state.value.perf.cachedCells = this.blocks.size;
     this.version.value++;
     
     if (playedMistake) playMistake();
@@ -164,7 +180,7 @@ export class GamePlay {
     else if (playedFlag) playFlag();
   }
 
-  sendAction(action: string, x: number, y: number) {
+  sendAction(action, x, y) {
     if (!this.user.value) {
       alert('请先登录后再操作！');
       return;
@@ -177,7 +193,7 @@ export class GamePlay {
     }
   }
   
-  handleCursorUpdate(payload: any) {
+  handleCursorUpdate(payload) {
     if (this.user.value && payload.userId === this.user.value.id) return;
     
     this.state.value.cursors[payload.userId] = {
@@ -198,7 +214,7 @@ export class GamePlay {
     }
   }
 
-  sendCursor(x: number, y: number) {
+  sendCursor(x, y) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user.value) {
       this.ws.send(JSON.stringify({
         type: 'cursor',
@@ -207,10 +223,10 @@ export class GamePlay {
     }
   }
 
-  async login(username: string, password: string) {
+  async login(username, password) {
 
     try {
-      const res: any = await $fetch('/api/auth/login', {
+      const res = await $fetch('/api/auth/login', {
         method: 'POST',
         body: { username, password }
       });
@@ -222,15 +238,15 @@ export class GamePlay {
         this.sendIdentify();
         return true;
       }
-    } catch (e: any) {
+    } catch (e) {
       alert(e.data?.statusMessage || '登录失败');
     }
     return false;
   }
 
-  async register(username: string, password: string, color: string) {
+  async register(username, password, color) {
     try {
-      const res: any = await $fetch('/api/auth/register', {
+      const res = await $fetch('/api/auth/register', {
         method: 'POST',
         body: { username, password, color }
       });
@@ -242,7 +258,7 @@ export class GamePlay {
         this.sendIdentify();
         return true;
       }
-    } catch (e: any) {
+    } catch (e) {
       alert(e.data?.statusMessage || '注册失败');
     }
     return false;
@@ -256,7 +272,7 @@ export class GamePlay {
     window.location.reload();
   }
 
-  getBlock(x: number, y: number) {
+  getBlock(x, y) {
     const key = `${x},${y}`;
     if (this.blocks.has(key)) return this.blocks.get(key);
 
@@ -268,22 +284,23 @@ export class GamePlay {
       flagged: false,
     });
     this.blocks.set(key, block);
+    this.state.value.perf.cachedCells = this.blocks.size;
     return block;
   }
 
-  onClick(block: any) {
+  onClick(block) {
     if (block.flagged || block.revealed) return;
     if (this.user.value) playPop();
     this.sendAction('click', block.x, block.y);
   }
 
-  onRightClick(block: any) {
+  onRightClick(block) {
     if (block.revealed) return;
     playFlag();
     this.sendAction('rightclick', block.x, block.y);
   }
 
-  autoExpand(block: any) {
+  autoExpand(block) {
     if (block.flagged || !block.revealed) return;
     if (this.user.value) playPop();
     this.sendAction('autoexpand', block.x, block.y);

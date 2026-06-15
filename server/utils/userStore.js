@@ -1,34 +1,25 @@
 import { useStorage } from '#imports';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
 
-export interface User {
-  id: string;
-  username: string;
-  passwordHash: string;
-  score: number;
-  color: string;
-  createdAt: number;
-}
-
 export const PLAYER_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
   '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
 ];
 
 export class UserStore {
-  private initialized = false;
+  initialized = false;
 
   async ensureInitialized() {
     if (this.initialized) return;
     this.initialized = true;
   }
 
-  private getStorage() {
+  getStorage() {
     return useStorage('kv');
   }
 
   // ─── 密码哈希 (scrypt) ──────────────────────────────────
-  private hashPassword(password: string): Promise<string> {
+  hashPassword(password) {
     return new Promise((resolve, reject) => {
       const salt = randomBytes(16).toString('hex');
       scrypt(password, salt, 64, (err, derivedKey) => {
@@ -38,7 +29,7 @@ export class UserStore {
     });
   }
 
-  private verifyPassword(password: string, hash: string): Promise<boolean> {
+  verifyPassword(password, hash) {
     return new Promise((resolve, reject) => {
       const parts = hash.split(':');
       const salt = parts[0];
@@ -52,18 +43,18 @@ export class UserStore {
   }
 
   // ─── CRUD 操作 ──────────────────────────────────────────
-  async createUser(username: string, password: string, color?: string): Promise<User | null> {
+  async createUser(username, password, color) {
     const storage = this.getStorage();
     const key = `user:${username.toLowerCase()}`;
     
     if (await storage.hasItem(key)) return null;
 
-    const user: User = {
+    const user = {
       id: Math.random().toString(36).substring(2, 10),
       username,
       passwordHash: await this.hashPassword(password),
       score: 0,
-      color: (color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)]) as string,
+      color: (color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)]),
       createdAt: Date.now()
     };
 
@@ -74,9 +65,9 @@ export class UserStore {
     return user;
   }
 
-  async validateUser(username: string, password: string): Promise<User | null> {
+  async validateUser(username, password) {
     const storage = this.getStorage();
-    const user: any = await storage.getItem(`user:${username.toLowerCase()}`);
+    const user = await storage.getItem(`user:${username.toLowerCase()}`);
     if (!user) return null;
 
     try {
@@ -86,25 +77,25 @@ export class UserStore {
     return null;
   }
 
-  async getUserById(id: string): Promise<User | null> {
+  async getUserById(id) {
     const storage = this.getStorage();
-    const username: any = await storage.getItem(`userid:${id}`);
+    const username = await storage.getItem(`userid:${id}`);
     if (!username) return null;
 
     try {
-      return await storage.getItem(`user:${username}`) as User;
+      return await storage.getItem(`user:${username}`);
     } catch (e) {
       return null;
     }
   }
 
-  async updateScore(id: string, delta: number) {
+  async updateScore(id, delta) {
     const storage = this.getStorage();
-    const username: any = await storage.getItem(`userid:${id}`);
+    const username = await storage.getItem(`userid:${id}`);
     if (!username) return;
 
     try {
-      const user: any = await storage.getItem(`user:${username}`);
+      const user = await storage.getItem(`user:${username}`);
       if (!user) return;
 
       user.score += delta;

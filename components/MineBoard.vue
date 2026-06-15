@@ -45,27 +45,14 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { initAudio } from '../assets/audio.js';
 
-const props = defineProps<{
-  play: any
-}>();
+const props = defineProps({ play: Object });
 
-type Cell = {
-  x: number;
-  y: number;
-  mine: boolean;
-  adjacentMines: number;
-  revealed: boolean;
-  flagged: boolean;
-  ownerColor?: string;
-  flagOwnerColor?: string;
-};
-
-const boardRef = ref<HTMLElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null);
+const boardRef = ref(null);
+const canvasRef = ref(null);
 const { width, height } = useElementSize(boardRef);
 
 const cellSize = 38;
@@ -84,10 +71,10 @@ const pixelOffsetY = ref(0);
 const scale = ref(1.0);
 const isDragging = ref(false);
 
-let ctx: CanvasRenderingContext2D | null = null;
-let renderFrame: number | null = null;
-let dragFrame: number | null = null;
-let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+let ctx = null;
+let renderFrame = null;
+let dragFrame = null;
+let longPressTimer = null;
 let startMouseX = 0;
 let startMouseY = 0;
 let startPixelX = 0;
@@ -98,8 +85,8 @@ let pendingDragX = 0;
 let pendingDragY = 0;
 let mouseIsDown = false;
 let hasDragged = false;
-let touchId1: number | null = null;
-let touchId2: number | null = null;
+let touchId1 = null;
+let touchId2 = null;
 let initialDist = 0;
 let initialScale = 1;
 let touchStartClientX = 0;
@@ -131,7 +118,7 @@ const darkNumberColors = [
   '#94a3b8',
 ];
 
-const hiddenCell: Cell = {
+const hiddenCell = {
   x: 0,
   y: 0,
   mine: false,
@@ -140,13 +127,13 @@ const hiddenCell: Cell = {
   flagged: false,
 };
 
-const readCssColor = (name: string, fallback: string) => {
+const readCssColor = (name, fallback) => {
   if (!boardRef.value) return fallback;
   return getComputedStyle(boardRef.value).getPropertyValue(name).trim() || fallback;
 };
 
-const getVisibleCell = (x: number, y: number) => {
-  return (props.play.blocks.get(`${x},${y}`) as Cell | undefined) || hiddenCell;
+const getVisibleCell = (x, y) => {
+  return (props.play.blocks.get(`${x},${y}`)) || hiddenCell;
 };
 
 const scheduleRender = () => {
@@ -178,6 +165,7 @@ const resizeCanvas = () => {
 };
 
 const drawBoard = () => {
+  const startTime = performance.now();
   const canvas = canvasRef.value;
   if (!canvas || !ctx) return;
 
@@ -225,18 +213,19 @@ const drawBoard = () => {
   }
 
   ctx.restore();
+  props.play.state.value.perf.drawTime = performance.now() - startTime;
 };
 
 const drawCell = (
-  context: CanvasRenderingContext2D,
-  cell: Cell,
-  x: number,
-  y: number,
-  cellBg: string,
-  revealedBg: string,
-  highlight: string,
-  shadow: string,
-  nums: string[],
+  context,
+  cell,
+  x,
+  y,
+  cellBg,
+  revealedBg,
+  highlight,
+  shadow,
+  nums,
 ) => {
   if (!cell.revealed || cell.flagged) {
     context.fillStyle = cell.flagged ? cellBg : cellBg;
@@ -277,11 +266,11 @@ const drawCell = (
 };
 
 const drawRaisedCell = (
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  highlight: string,
-  shadow: string,
+  context,
+  x,
+  y,
+  highlight,
+  shadow,
 ) => {
   context.fillStyle = highlight;
   context.fillRect(x, y, cellSize, 2);
@@ -292,10 +281,10 @@ const drawRaisedCell = (
 };
 
 const drawFlag = (
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  color: string,
+  context,
+  x,
+  y,
+  color,
 ) => {
   const poleX = x + 14;
   const poleTop = y + 8;
@@ -337,7 +326,7 @@ const drawFlag = (
   context.restore();
 };
 
-const screenToWorld = (clientX: number, clientY: number) => {
+const screenToWorld = (clientX, clientY) => {
   const rect = boardRef.value?.getBoundingClientRect();
   if (!rect) return null;
 
@@ -354,7 +343,7 @@ const screenToWorld = (clientX: number, clientY: number) => {
   };
 };
 
-const normalizeCamera = (pixX: number, pixY: number, gridX: number, gridY: number) => {
+const normalizeCamera = (pixX, pixY, gridX, gridY) => {
   let nextPixX = pixX;
   let nextPixY = pixY;
   let nextGridX = gridX;
@@ -368,7 +357,7 @@ const normalizeCamera = (pixX: number, pixY: number, gridX: number, gridY: numbe
   return { pixX: nextPixX, pixY: nextPixY, gridX: nextGridX, gridY: nextGridY };
 };
 
-const onDragStart = (e: MouseEvent) => {
+const onDragStart = (e) => {
   initAudio();
   if (e.buttons === 3) {
     const world = screenToWorld(e.clientX, e.clientY);
@@ -391,12 +380,12 @@ const onDragStart = (e: MouseEvent) => {
   window.addEventListener('mouseup', onDragEnd);
 };
 
-const onDragMove = (e: MouseEvent) => {
+const onDragMove = (e) => {
   if (!mouseIsDown) return;
   scheduleDrag(e.clientX, e.clientY);
 };
 
-const onDragEnd = (e: MouseEvent) => {
+const onDragEnd = (e) => {
   flushDragFrame();
   mouseIsDown = false;
   isDragging.value = false;
@@ -416,13 +405,13 @@ const cleanupMouseListeners = () => {
   window.removeEventListener('mouseup', onDragEnd);
 };
 
-const onContextMenu = (e: MouseEvent) => {
+const onContextMenu = (e) => {
   if (hasDragged) return;
   const world = screenToWorld(e.clientX, e.clientY);
   if (world) onCellRightClick(world.x, world.y);
 };
 
-const onWheel = (e: WheelEvent) => {
+const onWheel = (e) => {
   const zoomSpeed = 0.001;
   const delta = -e.deltaY * zoomSpeed;
   const oldScale = scale.value;
@@ -436,7 +425,7 @@ const onWheel = (e: WheelEvent) => {
   }
 };
 
-const applyZoom = (newScale: number, centerX: number, centerY: number) => {
+const applyZoom = (newScale, centerX, centerY) => {
   const oldScale = scale.value;
   const dx = (centerX / oldScale) - (centerX / newScale);
   const dy = (centerY / oldScale) - (centerY / newScale);
@@ -456,7 +445,7 @@ const applyZoom = (newScale: number, centerX: number, centerY: number) => {
   scheduleRender();
 };
 
-const onTouchStart = (e: TouchEvent) => {
+const onTouchStart = (e) => {
   initAudio();
 
   if (e.touches.length === 1) {
@@ -492,7 +481,7 @@ const onTouchStart = (e: TouchEvent) => {
   window.addEventListener('touchcancel', onTouchEnd);
 };
 
-const onTouchMove = (e: TouchEvent) => {
+const onTouchMove = (e) => {
   if (e.touches.length === 1 && touchId1 !== null && touchId2 === null) {
     const touch = getTouch(e, touchId1);
     if (touch) {
@@ -521,7 +510,7 @@ const onTouchMove = (e: TouchEvent) => {
   }
 };
 
-const onTouchEnd = (e: TouchEvent) => {
+const onTouchEnd = (e) => {
   if (e.touches.length === 0) {
     flushDragFrame();
     const shouldClick = !hasDragged && !longPressFired;
@@ -562,7 +551,7 @@ const cleanupTouchListeners = () => {
   window.removeEventListener('touchcancel', onTouchEnd);
 };
 
-const startLongPress = (clientX: number, clientY: number) => {
+const startLongPress = (clientX, clientY) => {
   clearLongPress();
   longPressFired = false;
   longPressTimer = setTimeout(() => {
@@ -581,7 +570,7 @@ const clearLongPress = () => {
   }
 };
 
-const getTouch = (e: TouchEvent, id: number): Touch | undefined => {
+const getTouch = (e, id) => {
   for (let i = 0; i < e.touches.length; i++) {
     const touch = e.touches[i];
     if (touch && touch.identifier === id) return touch;
@@ -589,11 +578,11 @@ const getTouch = (e: TouchEvent, id: number): Touch | undefined => {
   return undefined;
 };
 
-const getDist = (t1: Touch, t2: Touch) => {
+const getDist = (t1, t2) => {
   return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
 };
 
-const scheduleDrag = (clientX: number, clientY: number) => {
+const scheduleDrag = (clientX, clientY) => {
   pendingDragX = clientX;
   pendingDragY = clientY;
 
@@ -613,7 +602,7 @@ const flushDragFrame = () => {
   applyDrag(pendingDragX, pendingDragY);
 };
 
-const applyDrag = (clientX: number, clientY: number) => {
+const applyDrag = (clientX, clientY) => {
   const dx = (clientX - startMouseX) / scale.value;
   const dy = (clientY - startMouseY) / scale.value;
 
@@ -635,7 +624,7 @@ const applyDrag = (clientX: number, clientY: number) => {
   scheduleRender();
 };
 
-const handleLocalMouseMove = (e: MouseEvent) => {
+const handleLocalMouseMove = (e) => {
   const world = screenToWorld(e.clientX, e.clientY);
   if (!world) return;
 
@@ -655,26 +644,26 @@ const saveCameraPosition = () => {
   }));
 };
 
-const onCellClick = (wx: number, wy: number) => {
+const onCellClick = (wx, wy) => {
   if (hasDragged) return;
   initAudio();
   props.play.onClick(props.play.getBlock(wx, wy));
 };
 
-const onCellRightClick = (wx: number, wy: number) => {
+const onCellRightClick = (wx, wy) => {
   if (hasDragged) return;
   initAudio();
   props.play.onRightClick(props.play.getBlock(wx, wy));
 };
 
-const onCellLRClick = (wx: number, wy: number) => {
+const onCellLRClick = (wx, wy) => {
   if (hasDragged) return;
   initAudio();
   props.play.autoExpand(props.play.getBlock(wx, wy));
 };
 
 defineExpose({
-  jumpTo(x: number, y: number, save = true) {
+  jumpTo(x, y, save = true) {
     gridOffsetX.value = x;
     gridOffsetY.value = y;
     pixelOffsetX.value = 0;
@@ -689,13 +678,16 @@ defineExpose({
   getScale() {
     return scale.value;
   },
-  setScale(s: number) {
+  setScale(s) {
     scale.value = Math.min(Math.max(s, minScale), maxScale);
     scheduleRender();
   }
 });
 
 watch([width, height], resizeCanvas);
+watch([viewportCols, viewportRows], () => {
+  props.play.state.value.perf.visibleCells = (viewportCols.value + 2) * (viewportRows.value + 2);
+}, { immediate: true });
 watch(() => props.play.version.value, scheduleRender);
 
 onMounted(async () => {

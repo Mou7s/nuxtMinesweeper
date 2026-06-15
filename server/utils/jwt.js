@@ -4,18 +4,11 @@ import { createHmac, randomBytes } from 'node:crypto';
 const JWT_SECRET = process.env.JWT_SECRET || 'minesweeper_dev_secret_fallback_key_stable';
 const EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
 
-export interface JwtPayload {
-  userId: string;
-  username: string;
-  iat: number;
-  exp: number;
-}
-
 /**
  * 签发 JWT token (HS256)
  */
-export function signToken(user: { id: string; username: string }): string {
-  const payload: JwtPayload = {
+export function signToken(user) {
+  const payload = {
     userId: user.id,
     username: user.username,
     iat: Date.now(),
@@ -34,14 +27,14 @@ export function signToken(user: { id: string; username: string }): string {
 /**
  * 验证并解码 JWT token
  */
-export function verifyToken(token: string): JwtPayload | null {
+export function verifyToken(token) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
-    const header = parts[0] as string;
-    const body = parts[1] as string;
-    const signature = parts[2] as string;
+    const header = parts[0];
+    const body = parts[1];
+    const signature = parts[2];
 
     // 验证签名
     const expectedSig = createHmac('sha256', JWT_SECRET)
@@ -51,7 +44,7 @@ export function verifyToken(token: string): JwtPayload | null {
     if (signature !== expectedSig) return null;
 
     // 解码 payload
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as JwtPayload;
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
 
     // 验证过期时间
     if (payload.exp < Date.now()) return null;
@@ -62,6 +55,6 @@ export function verifyToken(token: string): JwtPayload | null {
   }
 }
 
-function base64url(obj: any): string {
+function base64url(obj) {
   return Buffer.from(JSON.stringify(obj)).toString('base64url');
 }
