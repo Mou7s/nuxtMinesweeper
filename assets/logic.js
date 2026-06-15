@@ -151,6 +151,8 @@ export class GamePlay {
     let playedFlag = false;
     let playedMistake = false;
     
+    const isMyAction = this.user.value && data.actorId === this.user.value.id;
+
     for (const b of data.updates) {
       const key = `${b.x},${b.y}`;
       const oldBlock = this.blocks.get(key);
@@ -176,8 +178,10 @@ export class GamePlay {
     
     if (playedMistake) playMistake();
     else if (playedExplosion) playExplosion();
-    else if (playedPop) playPop();
-    else if (playedFlag) playFlag();
+    else if (!isMyAction) {
+      if (playedPop) playPop();
+      else if (playedFlag) playFlag();
+    }
   }
 
   sendAction(action, x, y) {

@@ -53,7 +53,13 @@ export default defineWebSocketHandler({
         
         if (result) {
           const updateCount = result.updates ? result.updates.length : 0;
-          const updatePayload = JSON.stringify({ type: 'update', data: result });
+          const updatePayload = JSON.stringify({
+            type: 'update',
+            data: {
+              ...result,
+              actorId: userId
+            }
+          });
           const payloadSize = updatePayload.length;
 
           if (payloadSize > 100 * 1024) {
