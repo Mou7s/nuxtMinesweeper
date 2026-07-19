@@ -1,5 +1,6 @@
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 import { playPop, playExplosion, playFlag, playMistake } from './audio.js';
+import { decodeBlockUpdate, viewportChunkSignature } from './gameProtocol.mjs';
 
 
 export class GamePlay {
@@ -9,6 +10,7 @@ export class GamePlay {
     cameraX: 0,
     cameraY: 0,
     connected: false,
+    onlineCount: 0,
     leaderboard: [],
     cursors: {},
     perf: {
@@ -19,6 +21,7 @@ export class GamePlay {
       lastUpdateCellCount: 0,
       lastWsMsgDuration: 0,
       drawTime: 0,
+      latency: 0,
     }
   });
 
@@ -28,8 +31,20 @@ export class GamePlay {
   blocks = new Map();
   ws = null;
   reconnectTimer = null;
+  viewportTimer = null;
+  viewport = { x: 0, y: 0, cols: 20, rows: 15 };
+  viewportSignature = '';
+  viewportRequestId = 0;
+  latestSnapshotRequestId = 0;
+  loadedChunks = new Set();
+  pendingSnapshot = null;
+  cursorCleanupTimer = null;
+  pingTimer = null;
+  destroyed = false;
 
-  constructor() {
+  constructor(options = {}) {
+    this.noticeHandler = options.notify || ((message) => alert(message));
+    this.authRequiredHandler = options.onAuthRequired || null;
     // 尝试从本地恢复登录状态
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('minesweeper-user');
@@ -37,7 +52,14 @@ export class GamePlay {
       if (savedUser) this.user.value = JSON.parse(savedUser);
       if (savedToken) this.token.value = savedToken;
     }
+    if (typeof window !== 'undefined') {
+      this.cursorCleanupTimer = setInterval(() => this.cleanupCursors(), 1000);
+    }
     this.connect();
+  }
+
+  showNotice(message, color = 'error') {
+    this.noticeHandler(message, color);
   }
 
   connect() {
@@ -54,10 +76,11 @@ export class GamePlay {
 
     this.ws.onopen = () => {
       this.state.value.connected = true;
-      // 连接成功后立即报到
       if (this.user.value) {
         this.sendIdentify();
       }
+      this.sendViewport(true);
+      this.startHeartbeat();
     };
 
     this.ws.onmessage = (event) => {
@@ -72,14 +95,21 @@ export class GamePlay {
         if (msg.type === 'init') {
           updateCount = msg.data?.blocks ? msg.data.blocks.length : 0;
           this.handleInit(msg.data);
+        } else if (msg.type === 'snapshot') {
+          updateCount = msg.data?.blocks ? msg.data.blocks.length : 0;
+          this.handleSnapshot(msg.data, msg.requestId);
         } else if (msg.type === 'update') {
           updateCount = msg.data?.updates ? msg.data.updates.length : 0;
           this.handleUpdate(msg.data);
+        } else if (msg.type === 'state') {
+          this.handleState(msg.data?.state);
         } else if (msg.type === 'cursor') {
           this.handleCursorUpdate(msg.payload);
+        } else if (msg.type === 'pong') {
+          this.state.value.perf.latency = Math.max(0, Date.now() - msg.payload.timestamp);
         } else if (msg.type === 'error') {
-          alert(msg.message);
-          if (msg.message.includes('身份验证失败') || msg.message.includes('请先登录')) {
+          this.showNotice(msg.message, msg.code === 'RATE_LIMITED' ? 'warning' : 'error');
+          if (['INVALID_TOKEN', 'UNKNOWN_USER'].includes(msg.code)) {
             this.logout();
           }
         }
@@ -87,7 +117,7 @@ export class GamePlay {
         const duration = performance.now() - startTime;
         this.state.value.perf.lastWsMsgDuration = duration;
 
-        if (msg.type === 'init' || msg.type === 'update') {
+        if (msg.type === 'init' || msg.type === 'snapshot' || msg.type === 'update') {
           this.state.value.perf.lastUpdateCellCount = updateCount;
 
           if (rawLength > 100 * 1024) {
@@ -108,7 +138,9 @@ export class GamePlay {
     this.ws.onclose = () => {
       this.state.value.connected = false;
       this.ws = null;
-      this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+      if (this.pingTimer) clearInterval(this.pingTimer);
+      this.pingTimer = null;
+      if (!this.destroyed) this.reconnectTimer = setTimeout(() => this.connect(), 3000);
     };
 
     this.ws.onerror = () => {
@@ -126,25 +158,58 @@ export class GamePlay {
   }
 
   handleInit(data) {
-    this.state.value.flags = data.state.flags;
-    this.state.value.leaderboard = data.state.leaderboard;
+    this.handleState(data.state);
     this.blocks.clear();
-    for (const b of data.blocks) {
-      this.blocks.set(`${b.x},${b.y}`, reactive(b));
-    }
+    this.loadedChunks = new Set(data.chunks || []);
+    for (const b of data.blocks || []) this.blocks.set(`${b.x},${b.y}`, { ...b });
     this.state.value.perf.cachedCells = this.blocks.size;
     this.version.value++;
   }
 
-  handleUpdate(data) {
-    this.state.value.flags = data.state.flags;
-    this.state.value.leaderboard = data.state.leaderboard;
-    
-    // 更新本地玩家分数（如果排行榜里有我）
-    if (this.user.value) {
-      const me = data.state.leaderboard.find((p) => p.username === this.user.value.username);
-      if (me) this.user.value.score = me.score;
+  handleSnapshot(data, requestId = 0) {
+    if (requestId < this.viewportRequestId || requestId < this.latestSnapshotRequestId) return;
+    this.handleState(data.state);
+
+    if (data.replace || !this.pendingSnapshot || this.pendingSnapshot.requestId !== requestId) {
+      this.pendingSnapshot = {
+        requestId,
+        chunks: new Set(data.allChunks || data.chunks || []),
+        blocks: new Map(),
+      };
     }
+
+    for (const rawBlock of data.blocks || []) {
+      const block = decodeBlockUpdate(rawBlock);
+      this.pendingSnapshot.blocks.set(`${block.x},${block.y}`, block);
+    }
+
+    if (!data.complete) return;
+
+    this.latestSnapshotRequestId = requestId;
+    this.blocks = this.pendingSnapshot.blocks;
+    this.loadedChunks = this.pendingSnapshot.chunks;
+    this.pendingSnapshot = null;
+    this.state.value.perf.cachedCells = this.blocks.size;
+    this.version.value++;
+  }
+
+  handleState(state) {
+    if (!state) return;
+    this.state.value.flags = state.flags ?? this.state.value.flags;
+    this.state.value.leaderboard = state.leaderboard || [];
+    this.state.value.onlineCount = state.onlineCount ?? this.state.value.onlineCount;
+
+    if (this.user.value) {
+      const me = this.state.value.leaderboard.find(player => player.username === this.user.value.username);
+      if (me) {
+        this.user.value.score = me.score;
+        localStorage.setItem('minesweeper-user', JSON.stringify(this.user.value));
+      }
+    }
+  }
+
+  handleUpdate(data) {
+    this.handleState(data.state);
 
     let playedExplosion = false;
     let playedPop = false;
@@ -152,8 +217,13 @@ export class GamePlay {
     let playedMistake = false;
     
     const isMyAction = this.user.value && data.actorId === this.user.value.id;
+    if (isMyAction && Number.isFinite(data.actorScore)) {
+      this.user.value.score = data.actorScore;
+      localStorage.setItem('minesweeper-user', JSON.stringify(this.user.value));
+    }
 
-    for (const b of data.updates) {
+    for (const rawUpdate of data.updates) {
+      const b = decodeBlockUpdate(rawUpdate);
       const key = `${b.x},${b.y}`;
       const oldBlock = this.blocks.get(key);
       
@@ -169,7 +239,10 @@ export class GamePlay {
       if (this.blocks.has(key)) {
         Object.assign(this.blocks.get(key), b);
       } else {
-        this.blocks.set(key, reactive(b));
+        this.blocks.set(key, { ...b });
+      }
+      if (this.pendingSnapshot?.chunks.has(`${Math.floor(b.x / 32)},${Math.floor(b.y / 32)}`)) {
+        this.pendingSnapshot.blocks.set(key, { ...b });
       }
     }
 
@@ -186,7 +259,8 @@ export class GamePlay {
 
   sendAction(action, x, y) {
     if (!this.user.value) {
-      alert('请先登录后再操作！');
+      this.showNotice('请先登录后再操作', 'warning');
+      this.authRequiredHandler?.();
       return;
     }
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -195,6 +269,47 @@ export class GamePlay {
         payload: { action, x, y }
       }));
     }
+  }
+
+  setViewport(x, y, cols, rows) {
+    const next = {
+      x: Math.trunc(x),
+      y: Math.trunc(y),
+      cols: Math.max(1, Math.ceil(cols)),
+      rows: Math.max(1, Math.ceil(rows)),
+    };
+    const signature = viewportChunkSignature(next);
+    if (signature === this.viewportSignature) return;
+
+    this.viewport = next;
+    this.viewportSignature = signature;
+    if (this.viewportTimer) clearTimeout(this.viewportTimer);
+    this.viewportTimer = setTimeout(() => {
+      this.viewportTimer = null;
+      this.sendViewport();
+    }, 100);
+  }
+
+  sendViewport(force = false) {
+    if (!force && !this.viewportSignature) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.viewportRequestId++;
+    this.ws.send(JSON.stringify({
+      type: 'viewport',
+      requestId: this.viewportRequestId,
+      payload: this.viewport,
+    }));
+  }
+
+  startHeartbeat() {
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    const ping = () => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping', payload: { timestamp: Date.now() } }));
+      }
+    };
+    ping();
+    this.pingTimer = setInterval(ping, 10_000);
   }
   
   handleCursorUpdate(payload) {
@@ -208,7 +323,10 @@ export class GamePlay {
       lastUpdate: Date.now()
     };
 
-    // 清理过期光标（比如 5 秒没更新的）
+    this.cleanupCursors();
+  }
+
+  cleanupCursors() {
     const now = Date.now();
     for (const id in this.state.value.cursors) {
       const cursor = this.state.value.cursors[id];
@@ -243,7 +361,7 @@ export class GamePlay {
         return true;
       }
     } catch (e) {
-      alert(e.data?.statusMessage || '登录失败');
+      this.showNotice(e.data?.statusMessage || '登录失败');
     }
     return false;
   }
@@ -263,7 +381,7 @@ export class GamePlay {
         return true;
       }
     } catch (e) {
-      alert(e.data?.statusMessage || '注册失败');
+      this.showNotice(e.data?.statusMessage || '注册失败');
     }
     return false;
   }
@@ -280,20 +398,25 @@ export class GamePlay {
     const key = `${x},${y}`;
     if (this.blocks.has(key)) return this.blocks.get(key);
 
-    const block = reactive({
+    const block = {
       x, y,
       mine: false,
       adjacentMines: 0,
       revealed: false,
       flagged: false,
-    });
+      ephemeral: true,
+    };
     this.blocks.set(key, block);
     this.state.value.perf.cachedCells = this.blocks.size;
     return block;
   }
 
   onClick(block) {
-    if (block.flagged || block.revealed) return;
+    if (block.flagged) return;
+    if (block.revealed) {
+      this.autoExpand(block);
+      return;
+    }
     if (this.user.value) playPop();
     this.sendAction('click', block.x, block.y);
   }
@@ -312,5 +435,15 @@ export class GamePlay {
 
   respawn() {
     this.version.value++;
+  }
+
+  destroy() {
+    this.destroyed = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.viewportTimer) clearTimeout(this.viewportTimer);
+    if (this.cursorCleanupTimer) clearInterval(this.cursorCleanupTimer);
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.ws?.close();
+    this.ws = null;
   }
 }

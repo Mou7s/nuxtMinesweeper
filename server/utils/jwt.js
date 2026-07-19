@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 // 生产环境应使用环境变量存储密钥
 const JWT_SECRET = process.env.JWT_SECRET || 'minesweeper_dev_secret_fallback_key_stable';
@@ -29,6 +29,7 @@ export function signToken(user) {
  */
 export function verifyToken(token) {
   try {
+    if (typeof token !== 'string' || token.length > 4096) return null;
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
@@ -37,11 +38,17 @@ export function verifyToken(token) {
     const signature = parts[2];
 
     // 验证签名
+    const decodedHeader = JSON.parse(Buffer.from(header, 'base64url').toString());
+    if (decodedHeader.alg !== 'HS256' || decodedHeader.typ !== 'JWT') return null;
+
     const expectedSig = createHmac('sha256', JWT_SECRET)
       .update(`${header}.${body}`)
       .digest('base64url');
 
-    if (signature !== expectedSig) return null;
+    const signatureBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSig);
+    if (signatureBuffer.length !== expectedBuffer.length) return null;
+    if (!timingSafeEqual(signatureBuffer, expectedBuffer)) return null;
 
     // 解码 payload
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString());

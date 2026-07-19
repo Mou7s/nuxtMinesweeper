@@ -1,14 +1,17 @@
 import { globalUserStore } from '../../utils/userStore';
 import { signToken } from '../../utils/jwt';
+import { isValidPassword, normalizeUsername } from '../../utils/authValidation.mjs';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { username, password, color } = body;
+  const username = normalizeUsername(body?.username);
+  const password = body?.password;
+  const color = body?.color;
 
-  if (!username || !password || username.length < 2) {
+  if (!username || !isValidPassword(password, 6)) {
     throw createError({
       statusCode: 400,
-      statusMessage: '用户名或密码格式不正确'
+      statusMessage: '用户名需为 2-24 个字符，密码需为 6-128 个字符'
     });
   }
 

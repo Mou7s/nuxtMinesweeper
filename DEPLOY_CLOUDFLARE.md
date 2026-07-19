@@ -84,7 +84,9 @@ JWT_SECRET
 - Do not use `pnpm generate`; NuxtHub needs a server runtime.
 - The Worker name is set to `infinite-minesweeper` in `nuxt.config.js`.
 - Plain `pnpm dev` uses local `.data/kv` storage. Cloudflare builds and deployments use the real `KV` binding.
-- World board state is stored in Cloudflare KV. By default, `pnpm dev` uses the `world-dev.json` KV key and Cloudflare builds use `world.json`, so development and production worlds do not overwrite each other.
+- World board state is stored in Cloudflare KV. By default, `pnpm dev` derives its namespace from `world-dev.json` and Cloudflare builds derive it from `world.json`, so development and production worlds do not overwrite each other.
+- World data is stored as v2 metadata plus 32×32 chunk records under a separate `world-v2:<world key>` namespace. Existing single-record worlds are migrated automatically on first load; the legacy record is retained for rollback safety.
+- Clients subscribe only to chunks around their viewport, and only dirty chunks are persisted after actions.
 - To force a specific world key, set `WORLD_STATE_KEY` in `.env` or in the Worker environment.
 - The current game server still keeps active multiplayer state in a process-level singleton. The `cloudflare-durable` preset makes WebSocket sessions work through a Durable Object instance, but long-term world state should still be moved fully into Durable Object storage, D1, or another explicit persistent model.
 - If registration fails online, check that the generated Worker has a KV binding named `KV` and that `JWT_SECRET` is set.

@@ -38,6 +38,8 @@
                 placeholder="你的昵称" 
                 icon="i-heroicons-user" 
                 required 
+                minlength="2"
+                maxlength="24"
                 class="w-full"
               />
             </UFormField>
@@ -49,6 +51,8 @@
                 placeholder="••••••••" 
                 icon="i-heroicons-lock-closed" 
                 required 
+                :minlength="isLogin ? 1 : 6"
+                maxlength="128"
                 class="w-full"
               />
             </UFormField>
@@ -145,7 +149,7 @@ const open = () => {
 
 const handleSubmit = async () => {
   if (!form.username || !form.password) {
-    alert('请输入用户名和密码');
+    props.play.showNotice('请输入用户名和密码', 'warning');
     return;
   }
   
@@ -156,7 +160,7 @@ const handleSubmit = async () => {
     success = await props.play.login(form.username, form.password);
   } else {
     if (form.password !== form.confirmPassword) {
-      alert('两次输入的密码不一致！');
+      props.play.showNotice('两次输入的密码不一致', 'warning');
       loading.value = false;
       return;
     }
@@ -166,6 +170,7 @@ const handleSubmit = async () => {
   loading.value = false;
   if (success) {
     isOpen.value = false;
+    props.play.showNotice(isLogin.value ? '登录成功' : '注册成功', 'success');
   }
 };
 

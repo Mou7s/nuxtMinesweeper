@@ -10,11 +10,13 @@
     "generate": "NODE_OPTIONS=--no-deprecation nuxt generate",
     "preview": "NODE_OPTIONS=--no-deprecation nuxt preview",
     "preview:cloudflare": "pnpm build:cloudflare && NODE_OPTIONS=--no-deprecation pnpm exec wrangler --cwd .output dev",
-    "postinstall": "NODE_OPTIONS=--no-deprecation nuxt prepare"
+    "postinstall": "NODE_OPTIONS=--no-deprecation nuxt prepare",
+    "test": "node --test tests/*.test.mjs",
+    "test:smoke": "node tests/run-multiplayer-smoke.mjs"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
-    "@nuxt/devtools": "latest",
+    "@nuxt/devtools": "4.0.0-alpha.4",
     "@nuxthub/core": "0.10.7",
     "@vueuse/nuxt": "^14.3.0",
     "nuxt": "^4.4.4",
@@ -24,13 +26,5 @@
   "dependencies": {
     "@nuxt/ui": "^4.7.1",
     "vue-confetti-explosion": "^1.0.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "@tailwindcss/node": "4.3.0",
-      "@tailwindcss/postcss": "4.3.0",
-      "@tailwindcss/vite": "4.3.0",
-      "tailwindcss": "4.3.0"
-    }
   }
 }

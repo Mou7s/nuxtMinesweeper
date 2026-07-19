@@ -93,6 +93,11 @@ let touchStartClientX = 0;
 let touchStartClientY = 0;
 let longPressFired = false;
 let lastCursorEmit = 0;
+let lastCursorX = null;
+let lastCursorY = null;
+let themeObserver = null;
+const flagSprites = new Map();
+let mineSprite = null;
 
 const numberColors = [
   '',
@@ -127,9 +132,30 @@ const hiddenCell = {
   flagged: false,
 };
 
-const readCssColor = (name, fallback) => {
-  if (!boardRef.value) return fallback;
-  return getComputedStyle(boardRef.value).getPropertyValue(name).trim() || fallback;
+let palette = {
+  boardBg: '#bfc3cb',
+  gridBg: '#b0b4bc',
+  cellBg: '#c8ccd4',
+  revealedBg: '#e8ecf0',
+  highlight: 'rgba(255,255,255,0.65)',
+  shadow: 'rgba(0,0,0,0.25)',
+  nums: numberColors,
+};
+
+const refreshPalette = () => {
+  if (!boardRef.value) return;
+  const styles = getComputedStyle(boardRef.value);
+  const read = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+  palette = {
+    boardBg: read('--board-bg', '#bfc3cb'),
+    gridBg: read('--grid-bg', '#b0b4bc'),
+    cellBg: read('--cell-bg', '#c8ccd4'),
+    revealedBg: read('--revealed-bg', '#e8ecf0'),
+    highlight: read('--cell-highlight', 'rgba(255,255,255,0.65)'),
+    shadow: read('--cell-shadow', 'rgba(0,0,0,0.25)'),
+    nums: document.documentElement.classList.contains('dark') ? darkNumberColors : numberColors,
+  };
+  scheduleRender();
 };
 
 const getVisibleCell = (x, y) => {
@@ -149,7 +175,7 @@ const resizeCanvas = () => {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
   const nextWidth = Math.max(1, Math.floor(width.value * dpr));
   const nextHeight = Math.max(1, Math.floor(height.value * dpr));
 
@@ -169,17 +195,10 @@ const drawBoard = () => {
   const canvas = canvasRef.value;
   if (!canvas || !ctx) return;
 
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
   const viewWidth = width.value;
   const viewHeight = height.value;
-  const boardBg = readCssColor('--board-bg', '#bfc3cb');
-  const gridBg = readCssColor('--grid-bg', '#b0b4bc');
-  const cellBg = readCssColor('--cell-bg', '#c8ccd4');
-  const revealedBg = readCssColor('--revealed-bg', '#e8ecf0');
-  const highlight = readCssColor('--cell-highlight', 'rgba(255,255,255,0.65)');
-  const shadow = readCssColor('--cell-shadow', 'rgba(0,0,0,0.25)');
-  const isDark = document.documentElement.classList.contains('dark');
-  const nums = isDark ? darkNumberColors : numberColors;
+  const { boardBg, gridBg, cellBg, revealedBg, highlight, shadow, nums } = palette;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, viewWidth, viewHeight);
@@ -233,7 +252,7 @@ const drawCell = (
     drawRaisedCell(context, x, y, highlight, shadow);
 
     if (cell.flagged && !cell.revealed) {
-      drawFlag(context, x, y, cell.flagOwnerColor || '#ef4444');
+      context.drawImage(getFlagSprite(cell.flagOwnerColor || '#ef4444'), x, y, cellSize, cellSize);
     }
     return;
   }
@@ -243,8 +262,7 @@ const drawCell = (
     context.fillRect(x, y, cellSize, cellSize);
     context.strokeStyle = 'rgba(0, 0, 0, 0.25)';
     context.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
-    context.font = '20px Inter, Segoe UI Emoji, Apple Color Emoji, sans-serif';
-    context.fillText('💣', x + cellSize / 2, y + cellSize / 2 + 1);
+    context.drawImage(getMineSprite(), x, y, cellSize, cellSize);
     return;
   }
 
@@ -280,7 +298,35 @@ const drawRaisedCell = (
   context.fillRect(x + cellSize - 2, y, 2, cellSize);
 };
 
-const drawFlag = (
+const createSpriteCanvas = () => {
+  const sprite = document.createElement('canvas');
+  sprite.width = cellSize * 2;
+  sprite.height = cellSize * 2;
+  const spriteContext = sprite.getContext('2d');
+  spriteContext.scale(2, 2);
+  return { sprite, spriteContext };
+};
+
+const getFlagSprite = (color) => {
+  if (flagSprites.has(color)) return flagSprites.get(color);
+  const { sprite, spriteContext } = createSpriteCanvas();
+  drawFlagVector(spriteContext, 0, 0, color);
+  flagSprites.set(color, sprite);
+  return sprite;
+};
+
+const getMineSprite = () => {
+  if (mineSprite) return mineSprite;
+  const created = createSpriteCanvas();
+  created.spriteContext.font = '20px Inter, Segoe UI Emoji, Apple Color Emoji, sans-serif';
+  created.spriteContext.textAlign = 'center';
+  created.spriteContext.textBaseline = 'middle';
+  created.spriteContext.fillText('💣', cellSize / 2, cellSize / 2 + 1);
+  mineSprite = created.sprite;
+  return mineSprite;
+};
+
+const drawFlagVector = (
   context,
   x,
   y,
@@ -355,6 +401,15 @@ const normalizeCamera = (pixX, pixY, gridX, gridY) => {
   while (nextPixY < 0) { nextPixY += cellTotal; nextGridY += 1; }
 
   return { pixX: nextPixX, pixY: nextPixY, gridX: nextGridX, gridY: nextGridY };
+};
+
+const syncViewport = () => {
+  props.play.setViewport(
+    gridOffsetX.value - 1,
+    gridOffsetY.value - 1,
+    viewportCols.value + 2,
+    viewportRows.value + 2,
+  );
 };
 
 const onDragStart = (e) => {
@@ -442,6 +497,7 @@ const applyZoom = (newScale, centerX, centerY) => {
   gridOffsetX.value = next.gridX;
   gridOffsetY.value = next.gridY;
   saveCameraPosition();
+  syncViewport();
   scheduleRender();
 };
 
@@ -621,6 +677,7 @@ const applyDrag = (clientX, clientY) => {
   gridOffsetY.value = next.gridY;
   props.play.state.value.cameraX = next.gridX;
   props.play.state.value.cameraY = next.gridY;
+  syncViewport();
   scheduleRender();
 };
 
@@ -629,9 +686,13 @@ const handleLocalMouseMove = (e) => {
   if (!world) return;
 
   const now = Date.now();
-  if (now - lastCursorEmit > 50) {
+  const movedEnough = lastCursorX === null
+    || Math.hypot(world.preciseX - lastCursorX, world.preciseY - lastCursorY) >= 0.15;
+  if (movedEnough && now - lastCursorEmit >= 120) {
     props.play.sendCursor(world.preciseX, world.preciseY);
     lastCursorEmit = now;
+    lastCursorX = world.preciseX;
+    lastCursorY = world.preciseY;
   }
 };
 
@@ -673,6 +734,7 @@ defineExpose({
     if (save) {
       localStorage.setItem('minesweeper-camera', JSON.stringify({ x, y }));
     }
+    syncViewport();
     scheduleRender();
   },
   getScale() {
@@ -680,6 +742,7 @@ defineExpose({
   },
   setScale(s) {
     scale.value = Math.min(Math.max(s, minScale), maxScale);
+    syncViewport();
     scheduleRender();
   }
 });
@@ -687,12 +750,17 @@ defineExpose({
 watch([width, height], resizeCanvas);
 watch([viewportCols, viewportRows], () => {
   props.play.state.value.perf.visibleCells = (viewportCols.value + 2) * (viewportRows.value + 2);
+  syncViewport();
 }, { immediate: true });
 watch(() => props.play.version.value, scheduleRender);
 
 onMounted(async () => {
   await nextTick();
+  refreshPalette();
   resizeCanvas();
+  syncViewport();
+  themeObserver = new MutationObserver(refreshPalette);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 });
 
 onBeforeUnmount(() => {
@@ -701,5 +769,6 @@ onBeforeUnmount(() => {
   clearLongPress();
   cleanupMouseListeners();
   cleanupTouchListeners();
+  themeObserver?.disconnect();
 });
 </script>

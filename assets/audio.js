@@ -5,6 +5,15 @@ let audioCtx = null;
 let audioUnlocked = false;
 let unlockPromise = null;
 let listenersInstalled = false;
+let muted = false;
+
+export function setAudioMuted(value) {
+  muted = Boolean(value);
+}
+
+export function isAudioMuted() {
+  return muted;
+}
 
 function getAudioContext() {
   if (typeof window === 'undefined') return null;
@@ -68,6 +77,7 @@ function unlockAudio() {
 }
 
 async function ensureAudioReady() {
+  if (muted) return null;
   const ctx = getAudioContext();
   if (!ctx) return null;
 

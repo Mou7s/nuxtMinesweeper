@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 const kvNamespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
 const isCloudflareBuild = process.env.NITRO_PRESET === 'cloudflare-durable';
+const localKvBase = process.env.LOCAL_KV_BASE || '.data/kv';
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -24,7 +25,7 @@ export default defineNuxtConfig({
         }
       : {
           driver: 'fs-lite',
-          base: '.data/kv'
+          base: localKvBase
         }
   },
   nitro: {

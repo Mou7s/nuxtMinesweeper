@@ -49,12 +49,13 @@ export class UserStore {
     
     if (await storage.hasItem(key)) return null;
 
+    const selectedColor = PLAYER_COLORS.includes(color) ? color : null;
     const user = {
-      id: Math.random().toString(36).substring(2, 10),
+      id: randomBytes(8).toString('hex'),
       username,
       passwordHash: await this.hashPassword(password),
       score: 0,
-      color: (color || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)]),
+      color: selectedColor || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)],
       createdAt: Date.now()
     };
 
@@ -73,7 +74,9 @@ export class UserStore {
     try {
       const valid = await this.verifyPassword(password, user.passwordHash);
       if (valid) return user;
-    } catch (e) {}
+    } catch (error) {
+      console.error('[UserStore] Password verification failed:', error);
+    }
     return null;
   }
 
@@ -84,7 +87,8 @@ export class UserStore {
 
     try {
       return await storage.getItem(`user:${username}`);
-    } catch (e) {
+    } catch (error) {
+      console.error(`[UserStore] Failed to load user ${id}:`, error);
       return null;
     }
   }
@@ -100,7 +104,10 @@ export class UserStore {
 
       user.score += delta;
       await storage.setItem(`user:${username}`, user);
-    } catch (e) {}
+    } catch (error) {
+      console.error(`[UserStore] Failed to update score for ${id}:`, error);
+      throw error;
+    }
   }
 }
 

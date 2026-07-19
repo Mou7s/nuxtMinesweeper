@@ -56,10 +56,15 @@
       </div>
 
       <!-- Info Bar -->
-      <div class="flex max-w-[calc(100vw-24px)] items-center gap-2 overflow-hidden pointer-events-auto">
+      <div class="glass-scroll flex max-w-[calc(100vw-24px)] items-center gap-2 overflow-x-auto pb-1 pointer-events-auto">
         <div class="info-pill flex items-center gap-2.5">
           <span class="conn-dot" :class="play.state.value.connected ? 'conn-dot--online' : 'conn-dot--offline'"></span>
-          <span class="uppercase text-[9px] font-black">{{ play.state.value.connected ? 'Online' : 'Reconnecting' }}</span>
+          <span class="uppercase text-[9px] font-black">
+            {{ play.state.value.connected ? `Online · ${play.state.value.onlineCount}` : 'Reconnecting' }}
+          </span>
+          <span v-if="play.state.value.connected" class="font-mono text-[9px] text-slate-400">
+            {{ play.state.value.perf.latency }}ms
+          </span>
         </div>
 
         <UPopover :popper="{ placement: 'bottom', offset: 12 }">
@@ -106,6 +111,33 @@
             </div>
           </template>
         </UPopover>
+
+        <button class="info-pill flex items-center gap-2" :title="audioMuted ? '开启音效' : '关闭音效'" @click="toggleAudio">
+          <UIcon :name="audioMuted ? 'i-heroicons-speaker-x-mark' : 'i-heroicons-speaker-wave'" class="h-3.5 w-3.5" />
+        </button>
+
+        <button class="info-pill flex items-center gap-2" title="切换主题" @click="toggleTheme">
+          <UIcon :name="colorMode.value === 'dark' ? 'i-heroicons-sun' : 'i-heroicons-moon'" class="h-3.5 w-3.5" />
+        </button>
+
+        <button class="info-pill flex items-center gap-2" title="分享当前坐标" @click="shareCoordinates">
+          <UIcon name="i-heroicons-share" class="h-3.5 w-3.5" />
+        </button>
+
+        <UPopover :popper="{ placement: 'bottom', offset: 12 }">
+          <button class="info-pill flex items-center gap-2" title="操作帮助">
+            <UIcon name="i-heroicons-question-mark-circle" class="h-3.5 w-3.5" />
+          </button>
+          <template #content>
+            <div class="hud-panel w-72 space-y-3 p-5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <h4 class="font-black uppercase tracking-widest text-slate-900 dark:text-white">How to play</h4>
+              <p>左键或短按翻格；右键或长按插旗。</p>
+              <p>再次点击已揭示数字格可自动展开相邻格。</p>
+              <p>拖拽移动地图，滚轮或双指缩放；点击坐标可传送。</p>
+              <p class="text-[10px] text-slate-400">登录后才能操作棋盘和同步积分。</p>
+            </div>
+          </template>
+        </UPopover>
       </div>
     </div>
 
@@ -118,7 +150,7 @@
           </div>
           <div class="flex flex-col">
             <h3 class="text-xs font-black uppercase text-slate-600 dark:text-slate-300">Leaderboard</h3>
-            <span class="text-[9px] font-bold uppercase text-slate-400">Global Ranking</span>
+            <span class="text-[9px] font-bold uppercase text-slate-400">Online Ranking</span>
           </div>
         </div>
         <div class="space-y-1.5 max-h-[400px] overflow-y-auto glass-scroll pr-1">
@@ -258,6 +290,12 @@
           </div>
           <div class="flex flex-col gap-0.5 col-span-2">
             <div class="flex justify-between items-center">
+              <span class="text-[9px] text-slate-400 uppercase font-black">Network Latency</span>
+              <span class="font-bold text-slate-300 tabular-nums">{{ play.state.value.perf.latency }} ms</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-0.5 col-span-2">
+            <div class="flex justify-between items-center">
               <span class="text-[9px] text-slate-400 uppercase font-black">WS Msg Process</span>
               <span class="font-bold text-slate-300 tabular-nums" :class="wsDurationColor">{{ play.state.value.perf.lastWsMsgDuration.toFixed(1) }} ms</span>
             </div>
@@ -272,11 +310,46 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { GamePlay } from '../assets/logic.js';
-import { installAudioUnlockListeners } from '../assets/audio.js';
+import { installAudioUnlockListeners, setAudioMuted } from '../assets/audio.js';
 
-const play = new GamePlay();
 const boardRef = ref(null);
 const authModal = ref(null);
+const toast = useToast();
+const colorMode = useColorMode();
+const play = new GamePlay({
+  notify(message, color = 'error') {
+    toast.add({ title: message, color });
+  },
+  onAuthRequired() {
+    authModal.value?.open();
+  },
+});
+
+const audioMuted = ref(false);
+
+const toggleAudio = () => {
+  audioMuted.value = !audioMuted.value;
+  setAudioMuted(audioMuted.value);
+  localStorage.setItem('minesweeper-audio-muted', String(audioMuted.value));
+  play.showNotice(audioMuted.value ? '音效已关闭' : '音效已开启', 'success');
+};
+
+const toggleTheme = () => {
+  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+};
+
+const shareCoordinates = async () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('x', String(play.state.value.cameraX));
+  url.searchParams.set('y', String(play.state.value.cameraY));
+  url.searchParams.delete('debug');
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    play.showNotice('坐标链接已复制', 'success');
+  } catch {
+    play.showNotice('无法复制链接，请检查浏览器权限');
+  }
+};
 
 const teleportX = ref(0);
 const teleportY = ref(0);
@@ -360,16 +433,28 @@ const startFpsMeter = () => {
 onMounted(() => {
   installAudioUnlockListeners();
 
+  audioMuted.value = localStorage.getItem('minesweeper-audio-muted') === 'true';
+  setAudioMuted(audioMuted.value);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedX = Number(urlParams.get('x'));
+  const sharedY = Number(urlParams.get('y'));
+  const hasSharedCoordinates = Number.isInteger(sharedX)
+    && Number.isInteger(sharedY)
+    && Math.abs(sharedX) <= 10_000_000
+    && Math.abs(sharedY) <= 10_000_000;
+
   try {
-    const saved = localStorage.getItem('minesweeper-camera');
-    if (saved && boardRef.value) {
+    const saved = hasSharedCoordinates ? null : localStorage.getItem('minesweeper-camera');
+    if (hasSharedCoordinates && boardRef.value) {
+      boardRef.value.jumpTo(sharedX, sharedY);
+    } else if (saved && boardRef.value) {
       const { x, y } = JSON.parse(saved);
       boardRef.value.jumpTo(x || 0, y || 0, false);
     }
   } catch(e) {}
   
   // 检查是否显示调试面板
-  const urlParams = new URLSearchParams(window.location.search);
   const isDev = process.dev;
   showDebugPanel.value = isDev || urlParams.get('debug') === 'perf';
 
@@ -384,6 +469,7 @@ onUnmounted(() => {
   if (fpsFrame) {
     cancelAnimationFrame(fpsFrame);
   }
+  play.destroy();
 });
 
 const resetGame = () => {
