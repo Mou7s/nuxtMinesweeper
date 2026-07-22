@@ -27,8 +27,8 @@ await writeFile(join(localKvBase, 'smoke-test-world'), JSON.stringify({
 }));
 
 const server = spawn(
-  'pnpm',
-  ['exec', 'nuxt', 'dev', '--host', '127.0.0.1', '--port', String(port)],
+  'bun',
+  ['x', 'nuxt', 'dev', '--host', '127.0.0.1', '--port', String(port)],
   {
     cwd: process.cwd(),
     env: {
@@ -36,6 +36,7 @@ const server = spawn(
       LOCAL_KV_BASE: localKvBase,
       WORLD_STATE_KEY: 'smoke-test-world',
       JWT_SECRET: 'smoke-test-secret-not-for-production',
+      NUXT_IGNORE_LOCK: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   },
@@ -71,27 +72,55 @@ function runSmokeTest() {
   });
 }
 
+function stopServer() {
+  return new Promise((resolve) => {
+    if (server.exitCode !== null) {
+      resolve();
+      return;
+    }
+
+    if (process.platform === 'win32') {
+      const killer = spawn('taskkill', ['/PID', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+      killer.once('exit', () => resolve());
+      killer.once('error', () => {
+        server.kill();
+        resolve();
+      });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (server.exitCode === null) server.kill('SIGKILL');
+      resolve();
+    }, 5000);
+    server.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    server.kill('SIGTERM');
+  });
+}
+
 try {
   await waitForServer();
   await runSmokeTest();
   await new Promise(resolve => setTimeout(resolve, 2200));
   const persistedFiles = await readdir(localKvBase, { recursive: true });
+  const normalizedFiles = persistedFiles.map(file => file.replaceAll('\\', '/'));
   const persistenceEvidence = `Files: ${JSON.stringify(persistedFiles)}\nServer: ${serverOutput}`;
   assert.ok(
-    persistedFiles.some(file => file.endsWith('world-v2/smoke-test-world/meta')),
+    normalizedFiles.some(file => file.endsWith('world-v2/smoke-test-world/meta')),
     `world metadata was not persisted. ${persistenceEvidence}`,
   );
   assert.ok(
-    persistedFiles.some(file => file.includes('world-v2/smoke-test-world/chunk/')),
+    normalizedFiles.some(file => file.includes('world-v2/smoke-test-world/chunk/')),
     `dirty world chunks were not persisted. ${persistenceEvidence}`,
   );
   assert.ok(
-    persistedFiles.some(file => file.endsWith('world-v2/smoke-test-world/chunk/0,-1')),
+    normalizedFiles.some(file => file.endsWith('world-v2/smoke-test-world/chunk/0,-1')),
     `legacy world cells were not migrated to chunk storage. ${persistenceEvidence}`,
   );
 } finally {
-  server.kill('SIGTERM');
-  await new Promise(resolve => setTimeout(resolve, 250));
-  if (server.exitCode === null) server.kill('SIGKILL');
+  await stopServer();
   await rm(localKvBase, { recursive: true, force: true });
 }

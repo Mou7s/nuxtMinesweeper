@@ -23,26 +23,26 @@ Infinite Minesweeper 是一个 Nuxt 4 / Vue 3 全栈应用。浏览器使用 Can
 
 ## 开发命令
 
-使用 pnpm；不要无故改用 npm 或 yarn，也不要手工编辑 `pnpm-lock.yaml`。
+使用 Bun；不要无故改用 npm 或 yarn，也不要手工编辑 `bun.lock`。
 
 ```bash
-pnpm install
-pnpm dev
-pnpm build
-pnpm build:cloudflare
-pnpm preview:cloudflare
-pnpm test
+bun install
+bun run dev
+bun run build
+bun run build:cloudflare
+bun run preview:cloudflare
+bun run test
 ```
 
 仓库目前没有 `lint` 或独立 `typecheck` 脚本，但有 Node.js 核心单元测试。最小验证要求：
 
-- 所有逻辑改动：运行 `pnpm test`。
-- 普通 UI 或客户端改动：运行 `pnpm build`，并在浏览器中检查相关交互。
-- WebSocket、存储、认证、Nitro 或 Cloudflare 配置改动：运行 `pnpm build:cloudflare`；可用 `tests/multiplayer-smoke.mjs` 对隔离的本地 KV 做双客户端验证。
+- 所有逻辑改动：运行 `bun run test`。
+- 普通 UI 或客户端改动：运行 `bun run build`，并在浏览器中检查相关交互。
+- WebSocket、存储、认证、Nitro 或 Cloudflare 配置改动：运行 `bun run build:cloudflare`；可用 `tests/multiplayer-smoke.mjs` 对隔离的本地 KV 做双客户端验证。
 - 多人同步改动：至少用两个浏览器窗口验证连接、广播和重连。
 - 触摸或坐标换算改动：同时验证点击、拖拽、滚轮/双指缩放、长按和负坐标。
 
-不要用 `pnpm generate` 验证部署；本项目依赖服务端运行时和 WebSocket。
+不要用 `bun run generate` 验证部署；本项目依赖服务端运行时和 WebSocket。
 
 ## 架构约束
 

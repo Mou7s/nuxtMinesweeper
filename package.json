@@ -1,15 +1,16 @@
 {
   "name": "infinite-minesweeper",
   "private": true,
+  "packageManager": "bun@1.3.14",
   "scripts": {
     "build": "NODE_OPTIONS=--no-deprecation nuxt build",
     "build:cloudflare": "NODE_OPTIONS=--no-deprecation NITRO_PRESET=cloudflare-durable nuxt build",
     "cf:kv:create": "node scripts/create-cloudflare-kv.mjs",
-    "deploy": "pnpm build:cloudflare && pnpm exec wrangler --cwd .output deploy",
+    "deploy": "bun run build:cloudflare && bun x wrangler --cwd .output deploy",
     "dev": "NODE_OPTIONS=--no-deprecation nuxt dev --host",
     "generate": "NODE_OPTIONS=--no-deprecation nuxt generate",
     "preview": "NODE_OPTIONS=--no-deprecation nuxt preview",
-    "preview:cloudflare": "pnpm build:cloudflare && NODE_OPTIONS=--no-deprecation pnpm exec wrangler --cwd .output dev",
+    "preview:cloudflare": "bun run build:cloudflare && NODE_OPTIONS=--no-deprecation bun x wrangler --cwd .output dev",
     "postinstall": "NODE_OPTIONS=--no-deprecation nuxt prepare",
     "test": "node --test tests/*.test.mjs",
     "test:smoke": "node tests/run-multiplayer-smoke.mjs"
@@ -26,5 +27,18 @@
   "dependencies": {
     "@nuxt/ui": "^4.7.1",
     "vue-confetti-explosion": "^1.0.2"
-  }
+  },
+  "overrides": {
+    "@tailwindcss/node": "4.3.0",
+    "@tailwindcss/postcss": "4.3.0",
+    "@tailwindcss/vite": "4.3.0",
+    "tailwindcss": "4.3.0"
+  },
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "esbuild",
+    "sharp",
+    "vue-demi",
+    "workerd"
+  ]
 }

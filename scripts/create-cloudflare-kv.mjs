@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const envPath = resolve(process.cwd(), '.env');
 
-const output = execFileSync('pnpm', ['exec', 'wrangler', 'kv', 'namespace', 'create', 'KV'], {
+const output = execFileSync('bun', ['x', 'wrangler', 'kv', 'namespace', 'create', 'KV'], {
   encoding: 'utf8',
   stdio: ['ignore', 'pipe', 'inherit']
 });

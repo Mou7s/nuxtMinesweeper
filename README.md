@@ -45,14 +45,14 @@
 ### 环境要求
 
 - Node.js 20 或更高版本
-- pnpm
+- Bun 1.3+
 
 ### 安装与运行
 
 ```bash
-pnpm install
+bun install
 cp .env.example .env
-pnpm dev
+bun run dev
 ```
 
 打开 [http://localhost:3000](http://localhost:3000)。建议同时打开两个浏览器窗口测试多人同步。
@@ -90,19 +90,19 @@ openssl rand -base64 32
 
 | 命令 | 用途 |
 | --- | --- |
-| `pnpm dev` | 启动 Nuxt 开发服务器并监听所有网卡 |
-| `pnpm build` | 构建普通 Nuxt 产物 |
-| `pnpm preview` | 预览普通构建产物 |
-| `pnpm build:cloudflare` | 使用 `cloudflare-durable` preset 构建 |
-| `pnpm preview:cloudflare` | 构建后使用 Wrangler 本地预览 |
-| `pnpm cf:kv:create` | 创建 KV namespace 并写入 `.env` |
-| `pnpm deploy` | 构建并部署到 Cloudflare |
-| `pnpm test` | 运行坐标分块、雷区生成和输入校验测试 |
-| `pnpm test:smoke` | 在隔离 KV 中启动服务并运行双客户端端到端测试 |
+| `bun run dev` | 启动 Nuxt 开发服务器并监听所有网卡 |
+| `bun run build` | 构建普通 Nuxt 产物 |
+| `bun run preview` | 预览普通构建产物 |
+| `bun run build:cloudflare` | 使用 `cloudflare-durable` preset 构建 |
+| `bun run preview:cloudflare` | 构建后使用 Wrangler 本地预览 |
+| `bun run cf:kv:create` | 创建 KV namespace 并写入 `.env` |
+| `bun run deploy` | 构建并部署到 Cloudflare |
+| `bun run test` | 运行坐标分块、雷区生成和输入校验测试 |
+| `bun run test:smoke` | 在隔离 KV 中启动服务并运行双客户端端到端测试 |
 
-修改普通前端代码后至少运行 `pnpm test && pnpm build`；修改 WebSocket、存储、认证或 Cloudflare 配置后运行 `pnpm test && pnpm build:cloudflare`，并进行双窗口手动验证。
+修改普通前端代码后至少运行 `bun run test && bun run build`；修改 WebSocket、存储、认证或 Cloudflare 配置后运行 `bun run test && bun run build:cloudflare`，并进行双窗口手动验证。
 
-> 不要使用 `pnpm generate` 部署本项目；多人同步、认证和 KV 都依赖服务端运行时。
+> 不要使用 `bun run generate` 部署本项目；多人同步、认证和 KV 都依赖服务端运行时。
 
 ## 项目结构
 
@@ -162,17 +162,17 @@ GameServer（校验动作、生成雷区、计分）
 测试时可设置 `LOCAL_KV_BASE` 指向临时目录，从而不污染日常开发账号和世界：
 
 ```bash
-LOCAL_KV_BASE=/tmp/minesweeper-test pnpm dev
+LOCAL_KV_BASE=/tmp/minesweeper-test bun run dev
 ```
 
 ## Cloudflare 部署
 
 ```bash
-pnpm exec wrangler login
+bun x wrangler login
 cp .env.example .env
-pnpm cf:kv:create
-pnpm preview:cloudflare
-pnpm deploy
+bun run cf:kv:create
+bun run preview:cloudflare
+bun run deploy
 ```
 
 部署前请确认：

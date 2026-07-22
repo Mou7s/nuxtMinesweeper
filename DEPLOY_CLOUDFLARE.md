@@ -9,13 +9,13 @@ This project is configured for Cloudflare Workers with Nitro's `cloudflare-durab
 ## 1. Install dependencies
 
 ```bash
-pnpm install
+bun install
 ```
 
 ## 2. Log in to Cloudflare
 
 ```bash
-pnpm exec wrangler login
+bun x wrangler login
 ```
 
 ## 3. Create a KV namespace
@@ -27,13 +27,13 @@ cp .env.example .env
 Then create the namespace and write the returned id to `.env`:
 
 ```bash
-pnpm cf:kv:create
+bun run cf:kv:create
 ```
 
 Or create it manually:
 
 ```bash
-pnpm exec wrangler kv namespace create KV
+bun x wrangler kv namespace create KV
 ```
 
 Copy the returned `id` into `.env`:
@@ -53,13 +53,13 @@ openssl rand -base64 32
 ## 4. Preview locally with the Cloudflare runtime
 
 ```bash
-pnpm preview:cloudflare
+bun run preview:cloudflare
 ```
 
 ## 5. Deploy
 
 ```bash
-pnpm deploy
+bun run deploy
 ```
 
 Wrangler deploys from `.output`; Nitro writes the generated `wrangler.json` under `.output/server` and points Wrangler to it.
@@ -81,10 +81,10 @@ JWT_SECRET
 
 ## Notes
 
-- Do not use `pnpm generate`; NuxtHub needs a server runtime.
+- Do not use `bun run generate`; NuxtHub needs a server runtime.
 - The Worker name is set to `infinite-minesweeper` in `nuxt.config.js`.
-- Plain `pnpm dev` uses local `.data/kv` storage. Cloudflare builds and deployments use the real `KV` binding.
-- World board state is stored in Cloudflare KV. By default, `pnpm dev` derives its namespace from `world-dev.json` and Cloudflare builds derive it from `world.json`, so development and production worlds do not overwrite each other.
+- Plain `bun run dev` uses local `.data/kv` storage. Cloudflare builds and deployments use the real `KV` binding.
+- World board state is stored in Cloudflare KV. By default, `bun run dev` derives its namespace from `world-dev.json` and Cloudflare builds derive it from `world.json`, so development and production worlds do not overwrite each other.
 - World data is stored as v2 metadata plus 32×32 chunk records under a separate `world-v2:<world key>` namespace. Existing single-record worlds are migrated automatically on first load; the legacy record is retained for rollback safety.
 - Clients subscribe only to chunks around their viewport, and only dirty chunks are persisted after actions.
 - To force a specific world key, set `WORLD_STATE_KEY` in `.env` or in the Worker environment.
