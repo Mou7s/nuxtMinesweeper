@@ -1,13 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-// 生产环境应使用环境变量存储密钥
-const JWT_SECRET = process.env.JWT_SECRET || 'minesweeper_dev_secret_fallback_key_stable';
+const JWT_SECRET = process.env.JWT_SECRET || (import.meta.dev ? 'minesweeper_dev_secret_fallback_key_stable' : '');
 const EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
 
 /**
  * 签发 JWT token (HS256)
  */
 export function signToken(user) {
+  if (!JWT_SECRET) throw new Error('JWT_SECRET is required in production');
   const payload = {
     userId: user.id,
     username: user.username,
@@ -29,6 +29,7 @@ export function signToken(user) {
  */
 export function verifyToken(token) {
   try {
+    if (!JWT_SECRET) return null;
     if (typeof token !== 'string' || token.length > 4096) return null;
     const parts = token.split('.');
     if (parts.length !== 3) return null;

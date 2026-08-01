@@ -1,59 +1,44 @@
 import { ref } from 'vue';
-import { playPop, playExplosion, playFlag, playMistake } from './audio.js';
-import { decodeBlockUpdate, viewportChunkSignature } from './gameProtocol.mjs';
-
+import { playExplosion, playFlag, playPop } from './audio.js';
 
 export class GamePlay {
   version = ref(0);
   state = ref({
-    flags: 0,
-    cameraX: 0,
-    cameraY: 0,
     connected: false,
-    onlineCount: 0,
+    serverOffset: 0,
+    challenge: null,
+    run: null,
     leaderboard: [],
-    cursors: {},
-    perf: {
-      fps: 0,
-      visibleCells: 0,
-      cachedCells: 0,
-      lastWsMsgSize: 0,
-      lastUpdateCellCount: 0,
-      lastWsMsgDuration: 0,
-      drawTime: 0,
-      latency: 0,
-    }
+    leaderboardMe: null,
+    room: null,
+    notice: null,
   });
 
-  
   user = ref(null);
   token = ref(null);
-  blocks = new Map();
   ws = null;
   reconnectTimer = null;
-  viewportTimer = null;
-  viewport = { x: 0, y: 0, cols: 20, rows: 15 };
-  viewportSignature = '';
-  viewportRequestId = 0;
-  latestSnapshotRequestId = 0;
-  loadedChunks = new Set();
-  pendingSnapshot = null;
-  cursorCleanupTimer = null;
   pingTimer = null;
+  ticker = null;
   destroyed = false;
+  seq = 0;
+  noticeHandler;
+  authRequiredHandler;
 
   constructor(options = {}) {
     this.noticeHandler = options.notify || ((message) => alert(message));
     this.authRequiredHandler = options.onAuthRequired || null;
-    // 尝试从本地恢复登录状态
     if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('minesweeper-user');
-      const savedToken = localStorage.getItem('minesweeper-token');
-      if (savedUser) this.user.value = JSON.parse(savedUser);
-      if (savedToken) this.token.value = savedToken;
-    }
-    if (typeof window !== 'undefined') {
-      this.cursorCleanupTimer = setInterval(() => this.cleanupCursors(), 1000);
+      try {
+        const savedUser = localStorage.getItem('minesweeper-user');
+        const savedToken = localStorage.getItem('minesweeper-token');
+        if (savedUser) this.user.value = JSON.parse(savedUser);
+        if (savedToken) this.token.value = savedToken;
+      } catch {
+        this.user.value = null;
+        this.token.value = null;
+      }
+      this.ticker = setInterval(() => { this.version.value++; }, 250);
     }
     this.connect();
   }
@@ -63,386 +48,228 @@ export class GamePlay {
   }
 
   connect() {
-    if (typeof window === 'undefined') return;
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    if (typeof window === 'undefined' || this.destroyed) return;
+    if (this.ws && [WebSocket.OPEN, WebSocket.CONNECTING].includes(this.ws.readyState)) return;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    this.ws = new WebSocket(`${protocol}//${host}/ws`);
-
+    this.ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     this.ws.onopen = () => {
       this.state.value.connected = true;
-      if (this.user.value) {
-        this.sendIdentify();
-      }
-      this.sendViewport(true);
+      this.sendIdentify();
       this.startHeartbeat();
     };
-
-    this.ws.onmessage = (event) => {
-      const startTime = performance.now();
-      const rawLength = typeof event.data === 'string' ? event.data.length : 0;
-      this.state.value.perf.lastWsMsgSize = rawLength;
-
-      try {
-        const msg = JSON.parse(event.data);
-        
-        let updateCount = 0;
-        if (msg.type === 'init') {
-          updateCount = msg.data?.blocks ? msg.data.blocks.length : 0;
-          this.handleInit(msg.data);
-        } else if (msg.type === 'snapshot') {
-          updateCount = msg.data?.blocks ? msg.data.blocks.length : 0;
-          this.handleSnapshot(msg.data, msg.requestId);
-        } else if (msg.type === 'update') {
-          updateCount = msg.data?.updates ? msg.data.updates.length : 0;
-          this.handleUpdate(msg.data);
-        } else if (msg.type === 'state') {
-          this.handleState(msg.data?.state);
-        } else if (msg.type === 'cursor') {
-          this.handleCursorUpdate(msg.payload);
-        } else if (msg.type === 'pong') {
-          this.state.value.perf.latency = Math.max(0, Date.now() - msg.payload.timestamp);
-        } else if (msg.type === 'error') {
-          this.showNotice(msg.message, msg.code === 'RATE_LIMITED' ? 'warning' : 'error');
-          if (['INVALID_TOKEN', 'UNKNOWN_USER'].includes(msg.code)) {
-            this.logout();
-          }
-        }
-
-        const duration = performance.now() - startTime;
-        this.state.value.perf.lastWsMsgDuration = duration;
-
-        if (msg.type === 'init' || msg.type === 'snapshot' || msg.type === 'update') {
-          this.state.value.perf.lastUpdateCellCount = updateCount;
-
-          if (rawLength > 100 * 1024) {
-            console.warn(`[ws-perf-client] Large message received: ${msg.type}, size: ${(rawLength / 1024).toFixed(2)}KB (exceeds 100KB)`);
-          }
-          if (updateCount > 500) {
-            console.warn(`[ws-perf-client] Large update received: ${msg.type}, cells updated: ${updateCount} (exceeds 500)`);
-          }
-          if (duration > 50) {
-            console.warn(`[ws-perf-client] Slow message processing: ${msg.type}, took: ${duration.toFixed(2)}ms (exceeds 50ms)`);
-          }
-        }
-      } catch (e) {
-        console.warn('[ws] Failed to parse message', e);
-      }
-    };
-
     this.ws.onclose = () => {
       this.state.value.connected = false;
-      this.ws = null;
-      if (this.pingTimer) clearInterval(this.pingTimer);
-      this.pingTimer = null;
       if (!this.destroyed) this.reconnectTimer = setTimeout(() => this.connect(), 3000);
     };
-
-    this.ws.onerror = () => {
-      this.state.value.connected = false;
+    this.ws.onerror = () => { this.state.value.connected = false; };
+    this.ws.onmessage = (event) => {
+      let message;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      this.handleMessage(message);
     };
   }
 
-  sendIdentify() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.token.value) {
-      this.ws.send(JSON.stringify({
-        type: 'identify',
-        payload: { token: this.token.value }
-      }));
-    }
-  }
-
-  handleInit(data) {
-    this.handleState(data.state);
-    this.blocks.clear();
-    this.loadedChunks = new Set(data.chunks || []);
-    for (const b of data.blocks || []) this.blocks.set(`${b.x},${b.y}`, { ...b });
-    this.state.value.perf.cachedCells = this.blocks.size;
-    this.version.value++;
-  }
-
-  handleSnapshot(data, requestId = 0) {
-    if (requestId < this.viewportRequestId || requestId < this.latestSnapshotRequestId) return;
-    this.handleState(data.state);
-
-    if (data.replace || !this.pendingSnapshot || this.pendingSnapshot.requestId !== requestId) {
-      this.pendingSnapshot = {
-        requestId,
-        chunks: new Set(data.allChunks || data.chunks || []),
-        blocks: new Map(),
-      };
-    }
-
-    for (const rawBlock of data.blocks || []) {
-      const block = decodeBlockUpdate(rawBlock);
-      this.pendingSnapshot.blocks.set(`${block.x},${block.y}`, block);
-    }
-
-    if (!data.complete) return;
-
-    this.latestSnapshotRequestId = requestId;
-    this.blocks = this.pendingSnapshot.blocks;
-    this.loadedChunks = this.pendingSnapshot.chunks;
-    this.pendingSnapshot = null;
-    this.state.value.perf.cachedCells = this.blocks.size;
-    this.version.value++;
-  }
-
-  handleState(state) {
-    if (!state) return;
-    this.state.value.flags = state.flags ?? this.state.value.flags;
-    this.state.value.leaderboard = state.leaderboard || [];
-    this.state.value.onlineCount = state.onlineCount ?? this.state.value.onlineCount;
-
-    if (this.user.value) {
-      const me = this.state.value.leaderboard.find(player => player.username === this.user.value.username);
-      if (me) {
-        this.user.value.score = me.score;
-        localStorage.setItem('minesweeper-user', JSON.stringify(this.user.value));
+  handleMessage(message) {
+    const data = message.data || {};
+    if (message.type === 'hello') {
+      this.setServerOffset(data.serverNow);
+    } else if (message.type === 'pong') {
+      this.setServerOffset(data.serverNow);
+    } else if (message.type === 'auth') {
+      if (!this.user.value || this.user.value.id !== data.id) return;
+      this.user.value = { ...this.user.value, ...data };
+      this.persistUser();
+    } else if (message.type === 'run:init' || message.type === 'run:resume') {
+      if (data.challenge) this.state.value.challenge = data.challenge;
+      this.state.value.run = data.state;
+      this.seq = data.state?.actionCount || 0;
+      this.setServerOffset(data.serverNow);
+      this.version.value++;
+    } else if (message.type === 'run:update') {
+      this.state.value.run = data.state;
+      if (data.score?.isBest) this.showNotice('新纪录已提交到排行榜', 'success');
+      if (data.state?.status === 'complete') {
+        if (data.state.mineHits > 0) playExplosion();
+        this.refreshLeaderboard();
       }
-    }
-  }
-
-  handleUpdate(data) {
-    this.handleState(data.state);
-
-    let playedExplosion = false;
-    let playedPop = false;
-    let playedFlag = false;
-    let playedMistake = false;
-    
-    const isMyAction = this.user.value && data.actorId === this.user.value.id;
-    if (isMyAction && Number.isFinite(data.actorScore)) {
-      this.user.value.score = data.actorScore;
-      localStorage.setItem('minesweeper-user', JSON.stringify(this.user.value));
-    }
-
-    for (const rawUpdate of data.updates) {
-      const b = decodeBlockUpdate(rawUpdate);
-      const key = `${b.x},${b.y}`;
-      const oldBlock = this.blocks.get(key);
-      
-      if (b.mistake) {
-        playedMistake = true;
-      } else if (!oldBlock || (!oldBlock.revealed && b.revealed)) {
-        if (b.mine) playedExplosion = true;
-        else playedPop = true;
-      } else if (!oldBlock || (oldBlock.flagged !== b.flagged)) {
-        playedFlag = true;
+      this.version.value++;
+    } else if (message.type === 'room:created' || message.type === 'room:state' || message.type === 'room:countdown' || message.type === 'room:started') {
+      this.state.value.room = data;
+      if (message.type === 'room:started') {
+        this.state.value.run = null;
+        this.seq = 0;
       }
-      
-      if (this.blocks.has(key)) {
-        Object.assign(this.blocks.get(key), b);
-      } else {
-        this.blocks.set(key, { ...b });
-      }
-      if (this.pendingSnapshot?.chunks.has(`${Math.floor(b.x / 32)},${Math.floor(b.y / 32)}`)) {
-        this.pendingSnapshot.blocks.set(key, { ...b });
-      }
-    }
-
-    this.state.value.perf.cachedCells = this.blocks.size;
-    this.version.value++;
-    
-    if (playedMistake) playMistake();
-    else if (playedExplosion) playExplosion();
-    else if (!isMyAction) {
-      if (playedPop) playPop();
-      else if (playedFlag) playFlag();
+      this.version.value++;
+    } else if (message.type === 'error') {
+      this.showNotice(message.message || '操作失败', message.code === 'RATE_LIMITED' ? 'warning' : 'error');
+      if (['INVALID_TOKEN', 'UNKNOWN_USER'].includes(message.code)) this.logout();
     }
   }
 
-  sendAction(action, x, y) {
-    if (!this.user.value) {
-      this.showNotice('请先登录后再操作', 'warning');
-      this.authRequiredHandler?.();
-      return;
-    }
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'action',
-        payload: { action, x, y }
-      }));
-    }
-  }
-
-  setViewport(x, y, cols, rows) {
-    const next = {
-      x: Math.trunc(x),
-      y: Math.trunc(y),
-      cols: Math.max(1, Math.ceil(cols)),
-      rows: Math.max(1, Math.ceil(rows)),
-    };
-    const signature = viewportChunkSignature(next);
-    if (signature === this.viewportSignature) return;
-
-    this.viewport = next;
-    this.viewportSignature = signature;
-    if (this.viewportTimer) clearTimeout(this.viewportTimer);
-    this.viewportTimer = setTimeout(() => {
-      this.viewportTimer = null;
-      this.sendViewport();
-    }, 100);
-  }
-
-  sendViewport(force = false) {
-    if (!force && !this.viewportSignature) return;
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.viewportRequestId++;
-    this.ws.send(JSON.stringify({
-      type: 'viewport',
-      requestId: this.viewportRequestId,
-      payload: this.viewport,
-    }));
+  setServerOffset(serverNow) {
+    if (Number.isFinite(serverNow)) this.state.value.serverOffset = serverNow - Date.now();
   }
 
   startHeartbeat() {
     if (this.pingTimer) clearInterval(this.pingTimer);
-    const ping = () => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'ping', payload: { timestamp: Date.now() } }));
-      }
-    };
+    const ping = () => this.send({ type: 'ping', payload: { timestamp: Date.now() } });
     ping();
     this.pingTimer = setInterval(ping, 10_000);
   }
-  
-  handleCursorUpdate(payload) {
-    if (this.user.value && payload.userId === this.user.value.id) return;
-    
-    this.state.value.cursors[payload.userId] = {
-      username: payload.username || payload.userId,
-      x: payload.x,
-      y: payload.y,
-      color: payload.color,
-      lastUpdate: Date.now()
-    };
 
-    this.cleanupCursors();
+  sendIdentify() {
+    if (this.token.value) this.send({ type: 'identify', payload: { token: this.token.value } });
   }
 
-  cleanupCursors() {
-    const now = Date.now();
-    for (const id in this.state.value.cursors) {
-      const cursor = this.state.value.cursors[id];
-      if (cursor && now - cursor.lastUpdate > 5000) {
-        delete this.state.value.cursors[id];
-      }
+  send(message) {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(JSON.stringify(message));
+    return true;
+  }
+
+  startDaily(challengeId = null) {
+    this.resetRunUi();
+    this.send({ type: 'run:start', payload: { mode: 'daily', challengeId } });
+  }
+
+  startAsync(challengeId) {
+    this.resetRunUi();
+    this.send({ type: 'run:start', payload: { mode: 'async', challengeId } });
+  }
+
+  resumeRun(runId) {
+    this.send({ type: 'run:resume', payload: { runId } });
+  }
+
+  sendAction(action, x, y) {
+    if (!this.state.value.run || ['complete'].includes(this.state.value.run.status)) return;
+    if (!this.user.value && this.state.value.run.mode !== 'daily') {
+      this.authRequiredHandler?.();
+      return;
     }
+    this.seq++;
+    const messageType = this.state.value.room ? 'room:action' : 'run:action';
+    this.send({
+      type: messageType,
+      payload: { action, x, y, seq: this.seq },
+    });
   }
 
-  sendCursor(x, y) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user.value) {
-      this.ws.send(JSON.stringify({
-        type: 'cursor',
-        payload: { x, y }
-      }));
+  onClick(cell) {
+    if (!cell || cell.flagged || cell.revealed) return;
+    playPop();
+    this.sendAction('reveal', cell.x, cell.y);
+  }
+
+  onRightClick(cell) {
+    if (!cell || cell.revealed) return;
+    playFlag();
+    this.sendAction('flag', cell.x, cell.y);
+  }
+
+  getCell(x, y) {
+    const cells = this.state.value.run?.cells || [];
+    return cells.find(cell => cell.x === x && cell.y === y) || {
+      x, y, revealed: false, flagged: false, mine: false, adjacentMines: 0, mineHit: false,
+    };
+  }
+
+  createRoom(payload = {}) {
+    if (!this.user.value) {
+      this.authRequiredHandler?.();
+      return;
+    }
+    this.send({ type: 'room:create', payload });
+  }
+
+  joinRoom(code) {
+    if (!this.user.value) {
+      this.authRequiredHandler?.();
+      return;
+    }
+    this.send({ type: 'room:join', payload: { code } });
+  }
+
+  setRoomReady(ready) {
+    this.send({ type: 'room:ready', payload: { ready } });
+  }
+
+  async refreshLeaderboard() {
+    try {
+      const headers = this.token.value ? { Authorization: `Bearer ${this.token.value}` } : undefined;
+      const result = await $fetch('/api/leaderboards/daily', { headers });
+      this.state.value.leaderboard = result.entries || [];
+      this.state.value.leaderboardMe = result.me || null;
+      this.version.value++;
+    } catch {
+      // The board remains playable when the ranking endpoint is unavailable.
     }
   }
 
   async login(username, password) {
-
     try {
-      const res = await $fetch('/api/auth/login', {
-        method: 'POST',
-        body: { username, password }
-      });
-      if (res.success) {
-        this.user.value = res.user;
-        this.token.value = res.token;
-        localStorage.setItem('minesweeper-user', JSON.stringify(res.user));
-        localStorage.setItem('minesweeper-token', res.token);
-        this.sendIdentify();
-        return true;
-      }
-    } catch (e) {
-      this.showNotice(e.data?.statusMessage || '登录失败');
+      const result = await $fetch('/api/auth/login', { method: 'POST', body: { username, password } });
+      this.setAuth(result);
+      this.sendIdentify();
+      return true;
+    } catch (error) {
+      this.showNotice(error.data?.statusMessage || '登录失败');
+      return false;
     }
-    return false;
   }
 
   async register(username, password, color) {
     try {
-      const res = await $fetch('/api/auth/register', {
-        method: 'POST',
-        body: { username, password, color }
-      });
-      if (res.success) {
-        this.user.value = res.user;
-        this.token.value = res.token;
-        localStorage.setItem('minesweeper-user', JSON.stringify(res.user));
-        localStorage.setItem('minesweeper-token', res.token);
-        this.sendIdentify();
-        return true;
-      }
-    } catch (e) {
-      this.showNotice(e.data?.statusMessage || '注册失败');
+      const result = await $fetch('/api/auth/register', { method: 'POST', body: { username, password, color } });
+      this.setAuth(result);
+      this.sendIdentify();
+      return true;
+    } catch (error) {
+      this.showNotice(error.data?.statusMessage || '注册失败');
+      return false;
     }
-    return false;
+  }
+
+  setAuth(result) {
+    this.user.value = result.user;
+    this.token.value = result.token;
+    this.persistUser();
+  }
+
+  persistUser() {
+    if (typeof localStorage === 'undefined') return;
+    if (this.user.value) localStorage.setItem('minesweeper-user', JSON.stringify(this.user.value));
+    if (this.token.value) localStorage.setItem('minesweeper-token', this.token.value);
+  }
+
+  resetRunUi() {
+    this.state.value.run = null;
+    this.state.value.room = null;
+    this.seq = 0;
+    this.version.value++;
   }
 
   logout() {
     this.user.value = null;
     this.token.value = null;
-    localStorage.removeItem('minesweeper-user');
-    localStorage.removeItem('minesweeper-token');
-    window.location.reload();
-  }
-
-  getBlock(x, y) {
-    const key = `${x},${y}`;
-    if (this.blocks.has(key)) return this.blocks.get(key);
-
-    const block = {
-      x, y,
-      mine: false,
-      adjacentMines: 0,
-      revealed: false,
-      flagged: false,
-      ephemeral: true,
-    };
-    this.blocks.set(key, block);
-    this.state.value.perf.cachedCells = this.blocks.size;
-    return block;
-  }
-
-  onClick(block) {
-    if (block.flagged) return;
-    if (block.revealed) {
-      this.autoExpand(block);
-      return;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('minesweeper-user');
+      localStorage.removeItem('minesweeper-token');
     }
-    if (this.user.value) playPop();
-    this.sendAction('click', block.x, block.y);
-  }
-
-  onRightClick(block) {
-    if (block.revealed) return;
-    playFlag();
-    this.sendAction('rightclick', block.x, block.y);
-  }
-
-  autoExpand(block) {
-    if (block.flagged || !block.revealed) return;
-    if (this.user.value) playPop();
-    this.sendAction('autoexpand', block.x, block.y);
-  }
-
-  respawn() {
-    this.version.value++;
+    this.showNotice('已退出登录', 'success');
   }
 
   destroy() {
     this.destroyed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    if (this.viewportTimer) clearTimeout(this.viewportTimer);
-    if (this.cursorCleanupTimer) clearInterval(this.cursorCleanupTimer);
     if (this.pingTimer) clearInterval(this.pingTimer);
+    if (this.ticker) clearInterval(this.ticker);
     this.ws?.close();
     this.ws = null;
   }

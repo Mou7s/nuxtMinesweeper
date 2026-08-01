@@ -1,13 +1,13 @@
 <script setup>
 useSeoMeta({
-  title: 'Infinite Minesweeper — Multiplayer',
-  ogTitle: 'Infinite Minesweeper',
-  description: 'An infinite, multiplayer minesweeper game with real-time WebSocket sync. Built with Nuxt 4 + Vue 3.',
-  ogDescription: 'Explore an endless minefield with friends. No boundaries, no game over — just pure survival.',
+  title: 'Minesweeper — Daily Challenge',
+  ogTitle: 'Minesweeper',
+  description: 'A daily minesweeper challenge with timed rankings and real-time multiplayer rooms.',
+  ogDescription: 'Solve the same minefield, beat the clock, and race your friends.',
 });
 
 useHead({
-  title: 'Infinite Minesweeper',
+  title: 'Minesweeper',
   link: [
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },

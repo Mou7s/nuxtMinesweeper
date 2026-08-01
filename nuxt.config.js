@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-const kvNamespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
-const isCloudflareBuild = process.env.NITRO_PRESET === 'cloudflare-durable';
-const localKvBase = process.env.LOCAL_KV_BASE || '.data/kv';
+const isCloudflareBuild = process.env.MINESWEEPER_CLOUDFLARE_BUILD === '1';
+const d1DatabaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
+const localDatabasePath = process.env.LOCAL_DB_PATH || '.data/minesweeper.sqlite';
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -17,19 +17,20 @@ export default defineNuxtConfig({
     }
   },
   hub: {
-    kv: isCloudflareBuild
+    db: isCloudflareBuild
       ? {
-          driver: 'cloudflare-kv-binding',
-          binding: 'KV',
-          ...(kvNamespaceId ? { namespaceId: kvNamespaceId } : {})
+          dialect: 'sqlite',
+          driver: 'd1',
+          connection: d1DatabaseId ? { databaseId: d1DatabaseId } : undefined
         }
       : {
-          driver: 'fs-lite',
-          base: localKvBase
+          dialect: 'sqlite',
+          driver: 'libsql',
+          connection: { url: `file:${localDatabasePath}` }
         }
   },
   nitro: {
-    preset: 'cloudflare-durable',
+    preset: isCloudflareBuild ? 'cloudflare-durable' : 'node-server',
     experimental: {
       websocket: true
     },
@@ -37,11 +38,19 @@ export default defineNuxtConfig({
       deployConfig: true,
       nodeCompat: true,
       wrangler: {
-        name: 'infinite-minesweeper',
+        name: 'minesweeper',
         routes: [
           {
-            pattern: 'infiniteminesweeper.mou7s.com',
+            pattern: 'minesweeper.mou7s.com',
             custom_domain: true
+          }
+        ],
+        d1_databases: [
+          {
+            binding: 'DB',
+            database_name: 'minesweeper',
+            ...(d1DatabaseId ? { database_id: d1DatabaseId } : {}),
+            migrations_dir: 'server/db/migrations/sqlite'
           }
         ],
         compatibility_flags: ['nodejs_compat'],

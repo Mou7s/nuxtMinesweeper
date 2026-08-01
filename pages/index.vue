@@ -1,483 +1,284 @@
 <template>
-  <div class="relative w-screen h-screen overflow-hidden font-sans bg-slate-200 dark:bg-slate-950">
-    <!-- Floating HUD -->
-    <div class="hud-stack absolute left-1/2 top-3 z-50 flex -translate-x-1/2 flex-col items-center gap-2.5 pointer-events-none sm:top-4">
-      
-      <!-- Main Control Panel -->
-      <div class="hud-panel hud-main flex items-center gap-2 pointer-events-auto">
-        
-        <!-- User Info / Profile -->
-        <div 
-          class="hud-user group"
-          @click="handleProfileClick"
-        >
-          <div class="relative">
-            <UAvatar 
-              v-if="play.user.value"
-              :alt="play.user.value.username" 
-              size="md"
-              class="ring-2 ring-white/50 transition-transform group-hover:scale-105"
-              :style="{ background: play.user.value.color }"
-            />
-            <UIcon v-else name="i-heroicons-user-circle" class="h-9 w-9 text-slate-500/80 transition-colors group-hover:text-blue-500" />
-            <div v-if="play.user.value" class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
-          </div>
-          <div class="flex min-w-0 flex-col">
-            <span class="max-w-[118px] truncate text-sm font-black text-slate-800 transition-colors group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">
-              {{ play.user.value ? play.user.value.username : 'Guest Player' }}
-            </span>
-            <div class="flex items-center gap-1.5">
-              <span v-if="play.user.value" class="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest">
-                {{ play.user.value.score }} PTS
-              </span>
-              <span v-else class="text-[9px] text-slate-500 font-black tracking-tighter">CLICK TO JOIN</span>
-            </div>
+  <div class="minesweeper-app bg-slate-100 text-slate-900 transition-colors dark:bg-slate-950 dark:text-white">
+    <header class="app-header border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="brand-mark" aria-hidden="true">MS</div>
+          <div class="min-w-0">
+            <h1 class="truncate text-lg font-black tracking-tight sm:text-xl">Minesweeper</h1>
           </div>
         </div>
-
-
-        <div class="hud-divider"></div>
-
-        <!-- Face Button -->
-        <button class="face-btn" @click="resetGame">
-          {{ faceEmoji }}
-        </button>
-
-        <div class="hud-divider"></div>
-
-        <!-- Flags -->
-        <div class="hud-stat hud-stat--flags group">
-          <UIcon name="i-heroicons-flag" class="h-4.5 w-4.5 text-red-500" />
-          <span class="font-mono text-xl font-black text-slate-800 dark:text-slate-100">
-            {{ String(play.state.value.flags || 0).padStart(3, '0') }}
-          </span>
-        </div>
-
-      </div>
-
-      <!-- Info Bar -->
-      <div class="glass-scroll flex max-w-[calc(100vw-24px)] items-center gap-2 overflow-x-auto pb-1 pointer-events-auto">
-        <div class="info-pill flex items-center gap-2.5">
-          <span class="conn-dot" :class="play.state.value.connected ? 'conn-dot--online' : 'conn-dot--offline'"></span>
-          <span class="uppercase text-[9px] font-black">
-            {{ play.state.value.connected ? `Online · ${play.state.value.onlineCount}` : 'Reconnecting' }}
-          </span>
-          <span v-if="play.state.value.connected" class="font-mono text-[9px] text-slate-400">
-            {{ play.state.value.perf.latency }}ms
-          </span>
-        </div>
-
-        <UPopover :popper="{ placement: 'bottom', offset: 12 }">
-          <div 
-            class="info-pill flex cursor-pointer items-center gap-2 font-mono active:scale-95"
-            @click="syncTeleportCoords"
-          >
-            <UIcon name="i-heroicons-map-pin" class="h-3.5 w-3.5 text-blue-500" />
-            <span class="tabular-nums">{{ play.state.value.cameraX }}, {{ play.state.value.cameraY }}</span>
-          </div>
-          
-          <template #content>
-            <div class="hud-panel w-72 flex flex-col gap-5 p-5">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <div class="p-1.5 rounded-lg bg-blue-500/20 text-blue-500">
-                    <UIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
-                  </div>
-                  <h4 class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Teleport</h4>
-                </div>
-                <span class="text-[9px] font-mono font-bold text-slate-400">JMP.SYS</span>
-              </div>
-
-              
-              <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                  <span class="text-[9px] font-black text-gray-400 uppercase ml-1">Axis X</span>
-                  <UInput v-model.number="teleportX" placeholder="0" size="md" class="font-mono" type="number" />
-                </div>
-                <div class="space-y-1.5">
-                  <span class="text-[9px] font-black text-gray-400 uppercase ml-1">Axis Y</span>
-                  <UInput v-model.number="teleportY" placeholder="0" size="md" class="font-mono" type="number" />
-                </div>
-              </div>
-
-              <UButton 
-                block 
-                size="lg" 
-                color="primary" 
-                label="JUMP TO COORDINATES" 
-                class="font-black rounded-xl py-3 shadow-lg shadow-blue-500/20"
-                @click="doTeleport" 
-              />
-            </div>
-          </template>
-        </UPopover>
-
-        <button class="info-pill flex items-center gap-2" :title="audioMuted ? '开启音效' : '关闭音效'" @click="toggleAudio">
-          <UIcon :name="audioMuted ? 'i-heroicons-speaker-x-mark' : 'i-heroicons-speaker-wave'" class="h-3.5 w-3.5" />
-        </button>
-
-        <button class="info-pill flex items-center gap-2" title="切换主题" @click="toggleTheme">
-          <UIcon :name="colorMode.value === 'dark' ? 'i-heroicons-sun' : 'i-heroicons-moon'" class="h-3.5 w-3.5" />
-        </button>
-
-        <button class="info-pill flex items-center gap-2" title="分享当前坐标" @click="shareCoordinates">
-          <UIcon name="i-heroicons-share" class="h-3.5 w-3.5" />
-        </button>
-
-        <UPopover :popper="{ placement: 'bottom', offset: 12 }">
-          <button class="info-pill flex items-center gap-2" title="操作帮助">
-            <UIcon name="i-heroicons-question-mark-circle" class="h-3.5 w-3.5" />
+        <div class="flex items-center gap-2">
+          <button class="icon-button" title="切换主题" @click="toggleTheme">
+            <span class="theme-glyph" aria-hidden="true">{{ colorMode.value === 'dark' ? '☼' : '☾' }}</span>
           </button>
-          <template #content>
-            <div class="hud-panel w-72 space-y-3 p-5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <h4 class="font-black uppercase tracking-widest text-slate-900 dark:text-white">How to play</h4>
-              <p>左键或短按翻格；右键或长按插旗。</p>
-              <p>再次点击已揭示数字格可自动展开相邻格。</p>
-              <p>拖拽移动地图，滚轮或双指缩放；点击坐标可传送。</p>
-              <p class="text-[10px] text-slate-400">登录后才能操作棋盘和同步积分。</p>
-            </div>
-          </template>
-        </UPopover>
-      </div>
-    </div>
-
-    <!-- Leaderboard (Floating Right) -->
-    <div class="absolute right-4 top-4 z-50 hidden w-64 pointer-events-none lg:block">
-      <div class="hud-panel hud-side pointer-events-auto">
-        <div class="mb-4 flex items-center gap-3">
-          <div class="hud-icon hud-icon--gold">
-            <UIcon name="i-heroicons-trophy" class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
-          </div>
-          <div class="flex flex-col">
-            <h3 class="text-xs font-black uppercase text-slate-600 dark:text-slate-300">Leaderboard</h3>
-            <span class="text-[9px] font-bold uppercase text-slate-400">Online Ranking</span>
-          </div>
+          <button v-if="play.user.value" class="user-chip" @click="play.logout()">
+            <span class="user-dot" :style="{ background: play.user.value.color }"></span>
+            {{ play.user.value.username }}
+          </button>
+          <UButton v-else size="sm" color="primary" class="font-black" @click="authModal?.open()">登录</UButton>
         </div>
-        <div class="space-y-1.5 max-h-[400px] overflow-y-auto glass-scroll pr-1">
-          <div 
-            v-for="(p, i) in play.state.value.leaderboard" 
-            :key="p.username"
-            class="leaderboard-row group"
-            :class="{ 'leaderboard-row--me': p.username === play.user.value?.username }"
-          >
-            <div class="flex items-center gap-3 overflow-hidden">
-              <!-- Rank Badge -->
-              <div class="rank-badge" :class="`rank-badge--${i + 1}`">
-                <span v-if="i > 2">{{ i + 1 }}</span>
-                <UIcon v-else-if="i === 0" name="i-heroicons-bolt" class="w-3.5 h-3.5" />
-                <UIcon v-else-if="i === 1" name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-                <UIcon v-else-if="i === 2" name="i-heroicons-star" class="w-3.5 h-3.5" />
-              </div>
-
-              <!-- Player Avatar/Orb -->
-              <div class="relative flex-shrink-0">
-                <div 
-                  class="w-4 h-4 rounded-full ring-2 ring-white/50 transition-all duration-500 group-hover:shadow-[0_0_12px_rgba(255,255,255,0.5)]" 
-                  :style="{ 
-                    background: p.color,
-                    boxShadow: `0 0 10px ${p.color}44`
-                  }"
-                ></div>
-                <div v-if="p.username === play.user.value?.username" class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-white"></div>
-              </div>
-
-              <!-- Username -->
-              <span 
-                class="truncate font-black text-sm transition-colors duration-300"
-                :class="p.username === play.user.value?.username ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200 group-hover:text-blue-500'"
-                :title="p.username"
-              >
-                {{ p.username }}
-              </span>
-            </div>
-
-            <!-- Score -->
-            <div class="flex flex-col items-end leading-none">
-              <span class="font-mono font-black text-sm text-slate-800 dark:text-slate-100 group-hover:scale-110 transition-transform origin-right">
-                {{ p.score }}
-              </span>
-              <span class="text-[7px] font-black text-slate-400 uppercase tracking-tighter">POINTS</span>
-            </div>
-          </div>
-
-          <div v-if="!play.state.value.leaderboard.length" class="text-center py-10">
-            <UIcon name="i-heroicons-globe-alt" class="w-8 h-8 text-slate-300 animate-pulse mb-3 mx-auto" />
-            <div class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              Scanning World...
-            </div>
-          </div>
-        </div>
-
       </div>
-    </div>
+    </header>
 
-
-    <!-- The Infinite Board -->
-    <MineBoard ref="boardRef" :play="play" class="w-full h-full" />
-
-    <!-- Zoom Control (Bottom Right) -->
-    <div class="absolute bottom-4 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
-      <div class="hud-panel hud-zoom flex items-center gap-1 pointer-events-auto">
-        <button 
-          class="hud-icon-button group"
-          @click="boardRef?.setScale((boardRef?.getScale() || 1) - 0.2)"
-        >
-          <UIcon name="i-heroicons-minus" class="h-5 w-5 group-hover:text-blue-500" />
+    <main class="app-main mx-auto w-full max-w-7xl px-3 sm:px-4">
+      <nav class="mode-tabs grid grid-cols-3">
+        <button v-for="tab in tabs" :key="tab.id" class="mode-tab" :class="{ 'mode-tab--active': mode === tab.id }" @click="mode = tab.id">
+          <span>{{ tab.label }}</span>
         </button>
-        
-        <div 
-          class="zoom-readout"
-          @click="boardRef?.setScale(1.0)"
-          title="Reset Zoom"
-        >
-          <span class="font-mono text-[11px] font-black text-blue-600 dark:text-blue-300">
-            {{ Math.round((boardRef?.getScale() || 1) * 100) }}%
-          </span>
-        </div>
+      </nav>
 
+      <section v-if="mode === 'daily'" class="app-content game-layout game-layout--daily">
+        <article class="game-card panel overflow-hidden">
+          <div class="game-card__header flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h2 class="text-xl font-black tracking-tight">今日挑战</h2>
+              <p class="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                {{ daily?.challengeDate || '加载题目中...' }} · 16×16 · 40 雷 · UTC 00:00 刷新
+              </p>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Time</div>
+              <div class="font-mono text-3xl font-black tabular-nums text-blue-600 dark:text-blue-400">{{ formatTime(timerMs) }}</div>
+            </div>
+          </div>
 
-        <button 
-          class="hud-icon-button"
-          @click="boardRef?.setScale((boardRef?.getScale() || 1) + 0.2)"
-        >
-          <UIcon name="i-heroicons-plus" class="h-5 w-5" />
-        </button>
-      </div>
-    </div>
+          <div class="board-shell game-card__board">
+            <MineBoard v-if="play.state.value.run" :key="play.state.value.run.id" :play="play" />
+            <div v-else class="empty-state flex flex-col items-center justify-center px-6 text-center">
+              <h3 class="text-lg font-black">准备开始</h3>
+              <p class="mt-2 max-w-md text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">16×16 · 40 雷 · 记录你的最佳有效用时。</p>
+              <UButton class="mt-5 font-black" size="lg" color="primary" :disabled="!daily" @click="play.startDaily(daily?.id)">开始</UButton>
+            </div>
+          </div>
 
-    <!-- Auth Modal -->
+          <div v-if="play.state.value.run" class="game-card__footer flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>踩雷 {{ play.state.value.run.mineHits }} 次</span>
+              <span>罚时 {{ formatTime(play.state.value.run.penaltyMs) }}</span>
+              <span v-if="play.state.value.run.status === 'complete'" class="text-emerald-500">已完成</span>
+            </div>
+            <UButton size="sm" variant="soft" color="neutral" class="font-black" @click="play.startDaily(daily?.id)">重新挑战</UButton>
+          </div>
+        </article>
+
+        <aside class="app-side">
+          <div class="fold-panel panel">
+            <button type="button" class="fold-panel__toggle" :aria-expanded="dailyInfoOpen" @click="dailyInfoOpen = !dailyInfoOpen">
+              <span>
+                <span class="fold-panel__eyebrow">Daily ranking</span>
+                <span class="fold-panel__title">今日排行榜</span>
+              </span>
+              <span class="fold-panel__meta">{{ dailyInfoOpen ? '收起' : '展开' }}</span>
+            </button>
+            <div v-if="dailyInfoOpen" class="fold-panel__body">
+              <Leaderboard :entries="play.state.value.leaderboard" :me="play.state.value.leaderboardMe" />
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section v-else-if="mode === 'versus'" class="app-content game-layout game-layout--versus">
+        <article class="game-card panel">
+          <div class="game-card__header flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-black tracking-tight">实时对战</h2>
+              <p class="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">同一盘面、统一倒计时，先完成的人获胜。</p>
+            </div>
+          </div>
+
+          <div v-if="!play.state.value.room" class="game-card__body grid gap-4 sm:grid-cols-2">
+            <button class="action-card" @click="play.createRoom({ challengeId: daily?.id, maxPlayers: 2 })">
+              <span class="font-black">创建 1v1</span><small>今日题目</small>
+            </button>
+            <button class="action-card" @click="play.createRoom({ maxPlayers: roomSize })">
+              <span class="font-black">创建多人房间</span><small>私人随机题</small>
+            </button>
+            <div class="sm:col-span-2 bg-slate-100 p-4 dark:bg-slate-900">
+              <label class="mb-2 block text-xs font-black uppercase tracking-widest text-slate-400">加入房间</label>
+              <div class="flex gap-2">
+                <UInput v-model="roomCode" class="min-w-0 flex-1 font-mono uppercase" placeholder="输入房间码" maxlength="8" />
+                <UButton color="neutral" class="font-black" @click="play.joinRoom(roomCode)">加入</UButton>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="game-card__body game-card__body--room">
+            <RoomPanel :room="play.state.value.room" :play="play" />
+            <div v-if="play.state.value.run" class="room-board-shell board-shell">
+              <MineBoard :key="play.state.value.run.id" :play="play" />
+            </div>
+          </div>
+        </article>
+        <aside class="app-side">
+          <div class="fold-panel panel">
+            <button type="button" class="fold-panel__toggle" :aria-expanded="roomInfoOpen" @click="roomInfoOpen = !roomInfoOpen">
+              <span>
+                <span class="fold-panel__eyebrow">Room settings</span>
+                <span class="fold-panel__title">房间设置</span>
+              </span>
+              <span class="fold-panel__meta">{{ roomInfoOpen ? '收起' : '展开' }}</span>
+            </button>
+            <div v-if="roomInfoOpen" class="fold-panel__body">
+              <label class="text-xs font-bold text-slate-500">多人房间人数</label>
+              <select v-model.number="roomSize" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-900">
+                <option :value="3">3 人</option><option :value="4">4 人</option><option :value="6">6 人</option><option :value="8">8 人</option>
+              </select>
+              <p class="mt-5 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">实时房间需要登录。断线后重新连接不会暂停计时。</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section v-else class="app-content game-layout game-layout--async">
+        <article class="game-card panel">
+          <div class="game-card__header">
+            <h2 class="text-xl font-black tracking-tight">异步挑战</h2>
+            <p class="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">创建一个永久有效的挑战链接，和朋友分别竞速。</p>
+          </div>
+          <div class="game-card__body flex flex-col gap-3">
+            <div class="grid flex-none gap-3 sm:grid-cols-2">
+              <UButton size="lg" color="primary" class="font-black" @click="createAsyncChallenge">创建私人挑战</UButton>
+              <div class="flex gap-2">
+                <UInput v-model="asyncCode" class="min-w-0 flex-1 font-mono uppercase" placeholder="挑战码" maxlength="8" />
+                <UButton size="lg" color="neutral" class="font-black" @click="startAsyncChallenge">开始</UButton>
+              </div>
+            </div>
+            <div v-if="createdAsync" class="flex-none rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <div class="text-xs font-black uppercase tracking-widest text-emerald-600">Challenge created</div>
+              <div class="mt-2 break-all font-mono text-sm font-bold text-emerald-800 dark:text-emerald-200">{{ createdAsync.url }}</div>
+            </div>
+            <div v-if="play.state.value.run" class="async-board-shell board-shell">
+              <div class="mb-4 flex items-center justify-between"><span class="text-sm font-black">{{ play.state.value.challenge?.id }}</span><span class="font-mono text-2xl font-black text-amber-500">{{ formatTime(timerMs) }}</span></div>
+              <MineBoard :key="play.state.value.run.id" :play="play" />
+            </div>
+          </div>
+        </article>
+        <aside class="app-side">
+          <div class="fold-panel panel">
+            <button type="button" class="fold-panel__toggle" :aria-expanded="rulesOpen" @click="rulesOpen = !rulesOpen">
+              <span>
+                <span class="fold-panel__eyebrow">Rules</span>
+                <span class="fold-panel__title">挑战规则</span>
+              </span>
+              <span class="fold-panel__meta">{{ rulesOpen ? '收起' : '展开' }}</span>
+            </button>
+            <div v-if="rulesOpen" class="fold-panel__body">
+              <p class="text-sm font-medium leading-7 text-slate-500 dark:text-slate-400">每个挑战会记录你的最佳成绩。挑战码不会过期，双方可以多次尝试。</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+    </main>
+
+    <Footer class="app-footer" />
+
     <AuthModal ref="authModal" :play="play" />
-
-    <!-- Performance Debug Panel (Floating Left-Bottom) -->
-    <div v-if="showDebugPanel" class="absolute bottom-4 left-4 z-50 pointer-events-none">
-      <div class="hud-panel hud-perf pointer-events-auto flex flex-col gap-2.5 p-4 w-72 backdrop-blur-md bg-slate-900/80 border border-slate-700/50 rounded-2xl shadow-xl text-white font-mono text-xs">
-        <div class="flex items-center justify-between border-b border-slate-700/50 pb-2">
-          <div class="flex items-center gap-1.5 font-black uppercase text-blue-400">
-            <UIcon name="i-heroicons-cpu-chip" class="h-4 w-4 animate-pulse" />
-            <span>Perf Metrics</span>
-          </div>
-          <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">DEBUG MODE</span>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-y-2 gap-x-4">
-          <div class="flex flex-col gap-0.5">
-            <span class="text-[9px] text-slate-400 uppercase font-black">FPS</span>
-            <span class="text-sm font-black tabular-nums" :class="fpsColor">{{ play.state.value.perf.fps }}</span>
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span class="text-[9px] text-slate-400 uppercase font-black">Draw Time</span>
-            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.drawTime.toFixed(1) }} ms</span>
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span class="text-[9px] text-slate-400 uppercase font-black">Visible Cells</span>
-            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.visibleCells }}</span>
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span class="text-[9px] text-slate-400 uppercase font-black">Cached Cells</span>
-            <span class="text-sm font-black tabular-nums text-slate-200">{{ play.state.value.perf.cachedCells }}</span>
-          </div>
-          <div class="flex flex-col gap-0.5 col-span-2 border-t border-slate-800 pt-2">
-            <div class="flex justify-between items-center">
-              <span class="text-[9px] text-slate-400 uppercase font-black">Last WS Size</span>
-              <span class="font-bold text-slate-300 tabular-nums">{{ formatBytes(play.state.value.perf.lastWsMsgSize) }}</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-0.5 col-span-2">
-            <div class="flex justify-between items-center">
-              <span class="text-[9px] text-slate-400 uppercase font-black">Last Update Count</span>
-              <span class="font-bold text-slate-300 tabular-nums">{{ play.state.value.perf.lastUpdateCellCount }} cells</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-0.5 col-span-2">
-            <div class="flex justify-between items-center">
-              <span class="text-[9px] text-slate-400 uppercase font-black">Network Latency</span>
-              <span class="font-bold text-slate-300 tabular-nums">{{ play.state.value.perf.latency }} ms</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-0.5 col-span-2">
-            <div class="flex justify-between items-center">
-              <span class="text-[9px] text-slate-400 uppercase font-black">WS Msg Process</span>
-              <span class="font-bold text-slate-300 tabular-nums" :class="wsDurationColor">{{ play.state.value.perf.lastWsMsgDuration.toFixed(1) }} ms</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { GamePlay } from '../assets/logic.js';
-import { installAudioUnlockListeners, setAudioMuted } from '../assets/audio.js';
 
-const boardRef = ref(null);
-const authModal = ref(null);
 const toast = useToast();
 const colorMode = useColorMode();
+const authModal = ref(null);
+const mode = ref('daily');
+const daily = ref(null);
+const roomCode = ref('');
+const roomSize = ref(4);
+const asyncCode = ref('');
+const createdAsync = ref(null);
+const dailyInfoOpen = ref(false);
+const roomInfoOpen = ref(false);
+const rulesOpen = ref(false);
+const now = ref(Date.now());
+let clock = null;
+let compactViewport = null;
+
+const tabs = [
+  { id: 'daily', label: '每日挑战', icon: 'i-heroicons-calendar-days' },
+  { id: 'versus', label: '实时对战', icon: 'i-heroicons-bolt' },
+  { id: 'async', label: '异步挑战', icon: 'i-heroicons-link' },
+];
+
 const play = new GamePlay({
-  notify(message, color = 'error') {
-    toast.add({ title: message, color });
-  },
-  onAuthRequired() {
-    authModal.value?.open();
-  },
+  notify(message, color = 'error') { toast.add({ title: message, color }); },
+  onAuthRequired() { authModal.value?.open(); },
 });
 
-const audioMuted = ref(false);
+const timerMs = computed(() => {
+  const run = play.state.value.run;
+  if (!run) return 0;
+  if (run.effectiveMs !== null && run.effectiveMs !== undefined) return run.effectiveMs;
+  if (run.startedAt === null || run.startedAt === undefined) return 0;
+  return Math.max(0, now.value + play.state.value.serverOffset - run.startedAt + run.penaltyMs);
+});
 
-const toggleAudio = () => {
-  audioMuted.value = !audioMuted.value;
-  setAudioMuted(audioMuted.value);
-  localStorage.setItem('minesweeper-audio-muted', String(audioMuted.value));
-  play.showNotice(audioMuted.value ? '音效已关闭' : '音效已开启', 'success');
+const formatTime = (milliseconds) => {
+  const total = Math.max(0, Math.floor(Number(milliseconds) || 0));
+  const minutes = Math.floor(total / 60_000);
+  const seconds = Math.floor((total % 60_000) / 1_000).toString().padStart(2, '0');
+  const hundredths = Math.floor((total % 1_000) / 10).toString().padStart(2, '0');
+  return `${minutes}:${seconds}.${hundredths}`;
 };
 
-const toggleTheme = () => {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
-};
+const toggleTheme = () => { colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'; };
 
-const shareCoordinates = async () => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('x', String(play.state.value.cameraX));
-  url.searchParams.set('y', String(play.state.value.cameraY));
-  url.searchParams.delete('debug');
+const createAsyncChallenge = async () => {
+  if (!play.user.value) { authModal.value?.open(); return; }
   try {
-    await navigator.clipboard.writeText(url.toString());
-    play.showNotice('坐标链接已复制', 'success');
+    const result = await $fetch('/api/challenges/private', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${play.token.value}` },
+    });
+    createdAsync.value = result;
+    asyncCode.value = result.code;
+    play.showNotice('私人挑战已创建', 'success');
+  } catch (error) {
+    play.showNotice(error.data?.statusMessage || '创建挑战失败');
+  }
+};
+
+const startAsyncChallenge = async () => {
+  const code = asyncCode.value.trim().toUpperCase();
+  if (!code) return;
+  try {
+    const result = await $fetch(`/api/challenges/private/${code}`);
+    play.startAsync(result.id);
+  } catch (error) {
+    play.showNotice(error.data?.statusMessage || '挑战不存在');
+  }
+};
+
+const syncPanelDefaults = () => {
+  const nextCompactViewport = window.innerWidth < 1024;
+  if (compactViewport === nextCompactViewport) return;
+  compactViewport = nextCompactViewport;
+  const open = !nextCompactViewport;
+  dailyInfoOpen.value = open;
+  roomInfoOpen.value = open;
+  rulesOpen.value = open;
+};
+
+onMounted(async () => {
+  clock = setInterval(() => { now.value = Date.now(); }, 50);
+  syncPanelDefaults();
+  window.addEventListener('resize', syncPanelDefaults, { passive: true });
+  try {
+    daily.value = await $fetch('/api/challenges/daily');
+    play.state.value.challenge = daily.value;
+    await play.refreshLeaderboard();
   } catch {
-    play.showNotice('无法复制链接，请检查浏览器权限');
+    play.showNotice('每日题目暂时无法加载，请检查数据库配置', 'warning');
   }
-};
-
-const teleportX = ref(0);
-const teleportY = ref(0);
-
-const syncTeleportCoords = () => {
-  teleportX.value = play.state.value.cameraX;
-  teleportY.value = play.state.value.cameraY;
-};
-
-const doTeleport = () => {
-  if (boardRef.value) {
-    boardRef.value.jumpTo(teleportX.value, teleportY.value);
-  }
-};
-
-const faceEmoji = computed(() => {
-  const score = play.user.value?.score || 0;
-  if (score < -20) return '😵';
-  if (score < 0) return '😰';
-  if (score > 200) return '🤩';
-  if (score > 50) return '😎';
-  return '😊';
-});
-
-const handleProfileClick = () => {
-  if (!play.user.value) {
-    if (!authModal.value) {
-      alert('登录弹窗还没准备好，请稍后再试');
-      return;
-    }
-    authModal.value.open();
-  } else {
-    if (confirm('是否退出登录？')) {
-      play.logout();
-    }
-  }
-};
-
-const showDebugPanel = ref(false);
-
-const fpsColor = computed(() => {
-  const currentFps = play.state.value.perf.fps;
-  if (currentFps >= 55) return 'text-green-400';
-  if (currentFps >= 30) return 'text-yellow-400';
-  return 'text-red-400';
-});
-
-const wsDurationColor = computed(() => {
-  const duration = play.state.value.perf.lastWsMsgDuration;
-  if (duration < 16) return 'text-green-400';
-  if (duration < 50) return 'text-yellow-400';
-  return 'text-red-400';
-});
-
-const formatBytes = (bytes) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-let fpsFrame = null;
-const startFpsMeter = () => {
-  let lastTime = performance.now();
-  let frames = 0;
-  
-  const updateFps = () => {
-    frames++;
-    const now = performance.now();
-    if (now >= lastTime + 1000) {
-      play.state.value.perf.fps = Math.round((frames * 1000) / (now - lastTime));
-      frames = 0;
-      lastTime = now;
-    }
-    fpsFrame = requestAnimationFrame(updateFps);
-  };
-  fpsFrame = requestAnimationFrame(updateFps);
-};
-
-onMounted(() => {
-  installAudioUnlockListeners();
-
-  audioMuted.value = localStorage.getItem('minesweeper-audio-muted') === 'true';
-  setAudioMuted(audioMuted.value);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const sharedX = Number(urlParams.get('x'));
-  const sharedY = Number(urlParams.get('y'));
-  const hasSharedCoordinates = Number.isInteger(sharedX)
-    && Number.isInteger(sharedY)
-    && Math.abs(sharedX) <= 10_000_000
-    && Math.abs(sharedY) <= 10_000_000;
-
-  try {
-    const saved = hasSharedCoordinates ? null : localStorage.getItem('minesweeper-camera');
-    if (hasSharedCoordinates && boardRef.value) {
-      boardRef.value.jumpTo(sharedX, sharedY);
-    } else if (saved && boardRef.value) {
-      const { x, y } = JSON.parse(saved);
-      boardRef.value.jumpTo(x || 0, y || 0, false);
-    }
-  } catch(e) {}
-  
-  // 检查是否显示调试面板
-  const isDev = process.dev;
-  showDebugPanel.value = isDev || urlParams.get('debug') === 'perf';
-
-  if (showDebugPanel.value) {
-    startFpsMeter();
-  }
-  
-  // 登录框不再自动弹出，用户点击左上角头像区域手动打开
 });
 
 onUnmounted(() => {
-  if (fpsFrame) {
-    cancelAnimationFrame(fpsFrame);
-  }
+  if (clock) clearInterval(clock);
+  window.removeEventListener('resize', syncPanelDefaults);
   play.destroy();
 });
-
-const resetGame = () => {
-  play.respawn();
-  if (boardRef.value) {
-    const rx = Math.floor(Math.random() * 20000) - 10000;
-    const ry = Math.floor(Math.random() * 20000) - 10000;
-    boardRef.value.jumpTo(rx, ry);
-  }
-};
 </script>
